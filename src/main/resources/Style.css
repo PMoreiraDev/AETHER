@@ -226,6 +226,16 @@
     -fx-border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* Tag Selecionada (Destaque Ativo) */
+.pill-tag-selected {
+    -fx-background-color: #818cf8 !important;
+    -fx-text-fill: #ffffff !important;
+    -fx-font-weight: bold;
+    -fx-border-color: #a5b4fc !important;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(129, 140, 248, 0.6), 12, 0, 0, 0);
+}
+
 .pill-tag-adicionar {
     -fx-background-color: rgba(255, 255, 255, 0.08);
     -fx-background-radius: 999px;
@@ -241,7 +251,6 @@
     -fx-background-color: rgba(255, 255, 255, 0.16);
     -fx-text-fill: #ffffff;
 }
-
 /* Navegação e Linha de Progresso */
 .linha-progresso {
     -fx-stroke: rgba(255, 255, 255, 0.12);
@@ -260,6 +269,7 @@
 }
 
 .texto-passo-ativo {
+    -fx-font-color : rgba(129, 140, 248, 0.25);
     -fx-font-weight: bold;
     -fx-text-fill: #ffffff;
 }
@@ -293,4 +303,118 @@
 .botao-next:hover {
     -fx-background-color: #ffffff;
     -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.25), 16, 0, 0, 4);
+}
+
+/* ---------------------------------------------------------------------
+   4. Modal Customizada AETHER
+   --------------------------------------------------------------------- */
+/* Modal Customizada AETHER */
+.custom-dialog-pane {
+    -fx-background-color: #0f172a;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+    -fx-background-radius: 16px;
+    -fx-padding: 24px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.75), 40, 0, 0, 15);
+}
+
+.custom-dialog-pane .button-bar {
+    -fx-padding: 12px 0 0 0;
+}
+
+/* Botão Secundário (Cancel) */
+.custom-dialog-pane .button-bar .button {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-padding: 8px 22px;
+    -fx-cursor: hand;
+}
+
+.custom-dialog-pane .button-bar .button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-text-fill: #ffffff;
+}
+
+/* Botão Primário (Add Role / OK) */
+.custom-dialog-pane .button-bar .button:default {
+    -fx-background-color: #6366f1;
+    -fx-border-color: transparent;
+    -fx-text-fill: #ffffff;
+}
+
+.custom-dialog-pane .button-bar .button:default:hover {
+    -fx-background-color: #4f46e5;
+}
+
+
+/* ---------------------------------------------------------------------
+   5. Barra de Janela & Contentor Glassmorphism (Estilo iOS Dark)
+   --------------------------------------------------------------------- */
+
+/* Container Principal com bordas suaves e sombra profunda */
+.glass-window-container {
+    -fx-background-color: rgba(10, 15, 26, 0.75);
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 35, 0, 0, 12);
+}
+
+/* Header superior estilo vidro fumado */
+.glass-header-bar {
+    -fx-background-color: rgba(255, 255, 255, 0.03);
+    -fx-background-radius: 16px 16px 0 0;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 0 0 1px 0;
+}
+
+/* Título centralizado */
+.glass-window-title {
+    -fx-font-family: "SF Pro Display", "Segoe UI", sans-serif;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: rgba(248, 250, 252, 0.6);
+}
+
+/* Botões circulares (Bolas de Controlo iOS) */
+.window-dot {
+    -fx-min-width: 12px;
+    -fx-max-width: 12px;
+    -fx-min-height: 12px;
+    -fx-max-height: 12px;
+    -fx-background-radius: 50%;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+}
+
+/* Botão Fechar (Vermelho iOS) */
+.dot-close {
+    -fx-background-color: #ff5f56;
+}
+.dot-close:hover {
+    -fx-background-color: #e0443e;
+}
+
+/* Botão Minimizar (Amarelo iOS) */
+.dot-minimize {
+    -fx-background-color: #ffbd2e;
+}
+.dot-minimize:hover {
+    -fx-background-color: #dea123;
+}
+
+/* Botão Maximizar (Verde iOS) */
+.dot-maximize {
+    -fx-background-color: #27c93f;
+}
+.dot-maximize:hover {
+    -fx-background-color: #1aab29;
 }

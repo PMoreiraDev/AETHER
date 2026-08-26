@@ -55,7 +55,7 @@
     <!-- Ollama -->
     <rect x="290" y="800" width="320" height="80" rx="16" fill="#151A26" stroke="url(#chrome2)" stroke-width="2.5"/>
     <text x="450" y="836" font-size="15" fill="#9BA1AF" letter-spacing="2" font-weight="500">OLLAMA</text>
-    <text x="450" y="862" font-size="17" fill="#EDEFF3" font-weight="500">local model · your hardware</text>
+    <text x="450" y="862" font-size="17" fill="#EDEFF3" font-weight="500">local domain · your hardware</text>
   </g>
 
   <!-- accent dot on Ollama node -->

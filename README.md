@@ -145,7 +145,7 @@ Project "AETHER Website"        →  Shared with João
  └── Related memories of João   →  Private (stays on your device)
 ```
 
-Planned Connected AETHER capabilities include user profiles, friends, profile sharing, shared notes, projects, tasks, events, and goals, collaborative workspaces, and shared Context Graphs, all governed by the same permission model. This layer is a future direction (see Roadmap, Phase 9) and isn't required for AETHER's local core to be fully useful on its own.
+Planned Connected AETHER capabilities include user profiles, friends, profile sharing, shared notes, projects, tasks, events, and goals, collaborative workspaces, and shared Context Graphs, all governed by the same permission domain. This layer is a future direction (see Roadmap, Phase 9) and isn't required for AETHER's local core to be fully useful on its own.
 
 > **Private by default. Connected by choice.**
 
@@ -173,7 +173,7 @@ The Context Graph and intelligence layer come before advanced AI behavior, and t
 
 | Phase | Focus |
 | --- | --- |
-| 1 · Foundation | JavaFX shell, SQLite, migrations, core domain model |
+| 1 · Foundation | JavaFX shell, SQLite, migrations, core domain domain |
 | 2 · Core Organization | Tasks, projects, goals, calendar, notes, search, dashboard |
 | 3 · Entities & Context | People, relationships, events, entity linking, graph traversal |
 | 4 · Knowledge Layer | Note indexing, metadata, personal memory |
@@ -197,7 +197,7 @@ cd aether
 mvn clean javafx:run
 ```
 
-Install Ollama locally and pick whichever model fits your hardware — the model isn't hard-coded into AETHER's core.
+Install Ollama locally and pick whichever domain fits your hardware — the domain isn't hard-coded into AETHER's core.
 
 ---
 

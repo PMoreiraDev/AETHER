@@ -7,11 +7,14 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Line?>
 <?import javafx.scene.text.Text?>
 <?import javafx.scene.text.TextFlow?>
 
@@ -23,15 +26,14 @@
            stylesheets="@Style.css">
 
     <children>
-        <!-- Fundo Mantido da Tela 1 -->
         <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true">
             <image>
                 <Image url="images/background.jpg"/>
             </image>
         </ImageView>
 
-        <!-- Card Central de Perfil -->
-        <VBox alignment="TOP_LEFT" maxWidth="680" maxHeight="540" spacing="20" styleClass="card-perfil">
+        <!-- Card Central com largura ligeiramente expandida (720px) -->
+        <VBox alignment="TOP_LEFT" maxWidth="720" maxHeight="620" spacing="20" styleClass="card-perfil">
             <padding>
                 <Insets top="32" right="36" bottom="28" left="36"/>
             </padding>
@@ -51,8 +53,12 @@
                     </children>
                 </VBox>
 
-                <!-- Formulário (Grid 2 colunas) -->
-                <GridPane hgap="20" vgap="14">
+                <!-- Formulário com Colunas de 50% de Largura -->
+                <GridPane hgap="24" vgap="16">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50" />
+                        <ColumnConstraints percentWidth="50" />
+                    </columnConstraints>
                     <children>
                         <!-- Campo: Name -->
                         <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
@@ -77,18 +83,18 @@
                             </children>
                         </VBox>
 
-                        <!-- Campo: Preferred Name -->
+                        <!-- Campo: Preferred Name (Label otimizado) -->
                         <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
                             <children>
                                 <HBox spacing="6" alignment="CENTER_LEFT">
                                     <Label text="💬" styleClass="label-campo"/>
-                                    <Label text="What should AETHER call you?" styleClass="label-campo"/>
+                                    <Label text="Preferred Name" styleClass="label-campo"/>
                                 </HBox>
-                                <TextField fx:id="preferredNameInput" promptText="Alias / Nickname" styleClass="campo-texto"/>
+                                <TextField fx:id="preferredNameInput" promptText="What should AETHER call you?" styleClass="campo-texto"/>
                             </children>
                         </VBox>
 
-                        <!-- Campo: Occupation / Tags -->
+                        <!-- Campo: Occupation / Tags (Com FlowPane para quebra fluida) -->
                         <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
                             <children>
                                 <HBox spacing="6" alignment="CENTER_LEFT">
@@ -96,13 +102,9 @@
                                     <Label text="Occupation / Role" styleClass="label-campo"/>
                                     <Label text="(optional)" styleClass="label-opcional"/>
                                 </HBox>
-                                <HBox spacing="8" alignment="CENTER_LEFT">
-                                    <children>
-                                        <Button text="Student" styleClass="pill-tag"/>
-                                        <Button text="Developer" styleClass="pill-tag"/>
-                                        <Button text="+" styleClass="pill-tag-adicionar"/>
-                                    </children>
-                                </HBox>
+                                <FlowPane fx:id="occupationTagsBox" hgap="8" vgap="8" prefWrapLength="300">
+                                    <!-- Tags dinâmicas geradas sem truncagem -->
+                                </FlowPane>
                             </children>
                         </VBox>
                     </children>
@@ -121,19 +123,19 @@
 
                 <Region VBox.vgrow="ALWAYS"/>
 
-                <!-- Rodapé do Card: Progresso e Ações -->
+                <!-- Rodapé -->
                 <VBox spacing="14">
                     <children>
-                        <!-- Indicador de Passos -->
-                        <HBox alignment="CENTER" spacing="8">
+                        <HBox alignment="CENTER" spacing="12">
                             <children>
-                                <Label text="[1]  •  " styleClass="texto-passos"/>
-                                <Label text="2" styleClass="texto-passo-ativo"/>
-                                <Label text="  •  [3]" styleClass="texto-passos"/>
+                                <Label text="1" styleClass="texto-passos texto-passo-ativo"/>
+                                <Line startX="0" endX="30" styleClass="linha-progresso"/>
+                                <Label text="2" styleClass="texto-passos"/>
+                                <Line startX="0" endX="30" styleClass="linha-progresso"/>
+                                <Label text="3" styleClass="texto-passos"/>
                             </children>
                         </HBox>
 
-                        <!-- Botões Skip / Next -->
                         <HBox alignment="CENTER_LEFT">
                             <children>
                                 <Button text="Skip for now" onAction="#handleSkip" styleClass="link-skip"/>

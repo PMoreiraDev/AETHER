@@ -45,14 +45,14 @@ Without prior written permission from the copyright holder, you may NOT:
 - Sell, license, sublicense, or commercially distribute AETHER or
   derivative versions of it.
 - Use AETHER or substantial portions of its source code as the basis
-  for another product or service.
+  for another product or session.
 - Create and distribute modified, forked, or derivative versions of
   AETHER.
 - Remove, alter, or obscure copyright notices, license notices,
   attribution, or ownership information.
 - Use the AETHER name, logo, branding, or visual identity to imply
   official affiliation, endorsement, or ownership.
-- Use the source code to create a competing product or service.
+- Use the source code to create a competing product or session.
 - Repackage, rebrand, or redistribute AETHER under another name.
 
 4. PERSONAL MODIFICATIONS
@@ -93,7 +93,7 @@ Graph", associated logos, visual identity, and related branding are
 not granted for use under this license.
 
 You may not use these names or branding in a way that suggests that
-your product, fork, modification, or service is officially affiliated
+your product, fork, modification, or session is officially affiliated
 with or endorsed by the AETHER project.
 
 8. COMMERCIAL USE
@@ -105,10 +105,10 @@ Commercial use includes, but is not limited to:
 
 - Selling the software.
 - Selling modified or derivative versions.
-- Offering AETHER as part of a paid product or service.
+- Offering AETHER as part of a paid product or session.
 - Incorporating substantial portions of the source code into a
   commercial application.
-- Offering hosted or managed versions of AETHER as a paid service.
+- Offering hosted or managed versions of AETHER as a paid session.
 
 Commercial licensing may be granted separately at the sole discretion
 of the copyright holder.

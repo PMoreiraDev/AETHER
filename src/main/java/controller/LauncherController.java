@@ -13,15 +13,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-/**
- * Controlador da vista do ecrã de arranque do AETHER ({@code launcher.fxml}).
- *
- * @author BitMasters
- * @version 1.3
- */
+import util.WindowUtils;
+
 public class LauncherController implements Initializable {
 
     @FXML
@@ -66,9 +63,7 @@ public class LauncherController implements Initializable {
     }
 
     /**
-     * Reage ao clique no botão "START AETHER" e navega para a tela de perfil.
-     *
-     * @param event evento de ação do botão
+     * Reage ao clique no botão "START AETHER" e navega para a tela de perfil mantendo a barra de vidro.
      */
     @FXML
     private void handleStartAether(ActionEvent event) {
@@ -87,10 +82,13 @@ public class LauncherController implements Initializable {
             if (stage != null) {
                 Scene currentScene = stage.getScene();
 
-                if (currentScene != null) {
-                    currentScene.setRoot(profileRoot);
+                // Se a janela já tiver a estrutura de vidro, substitui apenas o conteúdo interior (Center)
+                if (currentScene != null && currentScene.getRoot() instanceof BorderPane) {
+                    BorderPane glassContainer = (BorderPane) currentScene.getRoot();
+                    glassContainer.setCenter(profileRoot);
                 } else {
-                    stage.setScene(new Scene(profileRoot));
+                    // Caso contrário, recria a janela envolta na barra Glassmorphic
+                    stage.setScene(WindowUtils.makeGlassWindow(stage, profileRoot, "AETHER"));
                 }
             }
 

@@ -4,6 +4,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import util.WindowUtils;
 
 import java.io.InputStream;
 
@@ -16,8 +17,8 @@ public class LauncherApp extends Application {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/LauncherApp.fxml"));
             Parent root = loader.load();
 
-            // 2. Definir a dimensão inicial padrão (1280x800)
-            Scene scene = new Scene(root, 1280, 800);
+            // 2. Criar a cena sem bordas com o método makeGlassWindow
+            Scene scene = WindowUtils.makeGlassWindow(primaryStage, root, "AETHER");
 
             // 3. Carregar o ícone da aplicação
             InputStream iconStream = getClass().getResourceAsStream("/images/logo.png");
@@ -27,11 +28,12 @@ public class LauncherApp extends Application {
                 System.err.println("[AETHER] Logótipo não encontrado no caminho '/images/logo.png'.");
             }
 
-            // 4. Configurar a janela
+            // 4. Configurar e apresentar a janela
             primaryStage.setTitle("AETHER");
             primaryStage.setScene(scene);
 
-            // Garantir proporções mínimas e permitir redimensionar / full screen
+            primaryStage.setWidth(1280);
+            primaryStage.setHeight(800);
             primaryStage.setMinWidth(900);
             primaryStage.setMinHeight(600);
             primaryStage.setResizable(true);
