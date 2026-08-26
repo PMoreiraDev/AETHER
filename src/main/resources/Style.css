@@ -1,0 +1,292 @@
+/* =====================================================================
+   AETHER — SYSTEM DESIGN & STYLESHEET
+   Ficheiro: Style.css
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. Configurações Globais & Root
+   --------------------------------------------------------------------- */
+.root {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.root-pane {
+    -fx-background-color: #050811;
+}
+
+/* ---------------------------------------------------------------------
+   2. Ecrã de Arranque (Launcher / Ecrã 1)
+   --------------------------------------------------------------------- */
+.conteudo-central {
+    -fx-alignment: center;
+}
+
+.logo-imagem {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 20, 0, 0, 4);
+}
+
+/* Botão START AETHER */
+.botao-start {
+    -fx-background-color: rgba(18, 24, 38, 0.65);
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-width: 1px;
+    -fx-padding: 12px 32px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 15, 0, 0, 6);
+}
+
+.botao-start:hover {
+    -fx-background-color: rgba(30, 41, 65, 0.85);
+    -fx-border-color: rgba(255, 255, 255, 0.35);
+    -fx-effect: dropshadow(gaussian, rgba(129, 140, 248, 0.25), 20, 0, 0, 0);
+}
+
+.botao-start:pressed {
+    -fx-background-color: rgba(15, 20, 32, 0.9);
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+/* Indicador de Luz Pulsante */
+.indicador-start {
+    -fx-fill: #818cf8;
+    -fx-effect: dropshadow(gaussian, #818cf8, 10, 0.7, 0, 0);
+}
+
+.texto-start {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+    -fx-letter-spacing: 2px;
+}
+
+.seta-start {
+    -fx-font-size: 15px;
+    -fx-text-fill: #94a3b8;
+}
+
+.botao-start:hover .seta-start {
+    -fx-text-fill: #ffffff;
+    -fx-translate-x: 3px;
+}
+
+/* Rodapé: sem caixa de fundo, com texto nítido e sombra de leitura */
+.rodape {
+    -fx-alignment: center;
+}
+
+.icone-cadeado {
+    -fx-font-size: 13px;
+    -fx-text-fill: #a5b4fc;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.9), 0.9, 0.8, 0, 1);
+}
+
+.rodape-texto {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-text-fill: #f1f5f9;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.9), 0.9, 0.8, 0, 1);
+}
+
+/* ---------------------------------------------------------------------
+   3. Ecrã de Perfil (Profile Setup / Ecrã 2)
+   --------------------------------------------------------------------- */
+
+/* Card central com Glassmorphism translúcido */
+.card-perfil {
+    -fx-background-color: rgba(18, 24, 38, 0.48);
+    -fx-background-radius: 20px;
+    -fx-border-radius: 20px;
+    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 30, 0, 0, 8);
+}
+
+/* Cabeçalho e Títulos */
+.titulo-passo-numero {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-fill: #818cf8;
+}
+
+.titulo-passo-texto {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-fill: #ffffff;
+}
+
+.subtitulo-perfil {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.descricao-perfil {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13.5px;
+    -fx-text-fill: #94a3b8;
+}
+
+/* Labels do Formulário */
+.label-campo {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #e2e8f0;
+}
+
+.label-opcional {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-text-fill: #64748b;
+}
+
+/* Campos de Texto Simples (TextField) */
+.campo-texto {
+    -fx-background-color: rgba(10, 15, 26, 0.45);
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1px;
+    -fx-text-fill: #f8fafc;
+    -fx-prompt-text-fill: #64748b;
+    -fx-padding: 10px 14px;
+}
+
+.campo-texto:focused {
+    -fx-border-color: rgba(129, 140, 248, 0.6);
+    -fx-background-color: rgba(10, 15, 26, 0.65);
+}
+
+/* Configuração e Remoção do Fundo Branco da TextArea */
+.area-texto {
+    -fx-background-color: transparent;
+    -fx-text-fill: #f8fafc;
+    -fx-text-inner-color: #f8fafc;
+    -fx-prompt-text-fill: #64748b;
+    -fx-highlight-fill: rgba(129, 140, 248, 0.4);
+    -fx-highlight-text-fill: #ffffff;
+}
+
+.area-texto .scroll-pane,
+.area-texto .scroll-pane .viewport,
+.area-texto .content {
+    -fx-background-color: rgba(10, 15, 26, 0.45) !important;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1px;
+}
+
+.area-texto .content {
+    -fx-padding: 10px 14px;
+}
+
+.area-texto:focused .content {
+    -fx-border-color: rgba(129, 140, 248, 0.6);
+    -fx-background-color: rgba(10, 15, 26, 0.65) !important;
+}
+
+.area-texto .text {
+    -fx-fill: #f8fafc !important;
+}
+
+.area-texto:focused .text {
+    -fx-fill: #f8fafc !important;
+}
+
+/* Tags de Ocupação (Pills) */
+.pill-tag {
+    -fx-background-color: rgba(30, 41, 59, 0.5);
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-border-width: 1px;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 12px;
+    -fx-padding: 6px 14px;
+    -fx-cursor: hand;
+}
+
+.pill-tag:hover {
+    -fx-background-color: rgba(51, 65, 85, 0.7);
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+}
+
+.pill-tag-adicionar {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 13px;
+    -fx-padding: 4px 10px;
+    -fx-cursor: hand;
+}
+
+.pill-tag-adicionar:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.16);
+    -fx-text-fill: #ffffff;
+}
+
+/* Navegação e Linha de Progresso */
+.linha-progresso {
+    -fx-stroke: rgba(255, 255, 255, 0.12);
+    -fx-stroke-width: 1.5px;
+}
+
+.linha-progresso-ativa {
+    -fx-stroke: #818cf8;
+    -fx-stroke-width: 2px;
+}
+
+.texto-passos {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-text-fill: #64748b;
+}
+
+.texto-passo-ativo {
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.link-skip {
+    -fx-background-color: transparent;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-text-fill: #94a3b8;
+    -fx-underline: true;
+    -fx-cursor: hand;
+}
+
+.link-skip:hover {
+    -fx-text-fill: #ffffff;
+}
+
+.botao-next {
+    -fx-background-color: linear-gradient(to right, #f1f5f9, #e2e8f0);
+    -fx-background-radius: 999px;
+    -fx-border-radius: 999px;
+    -fx-text-fill: #0f172a;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13.5px;
+    -fx-font-weight: bold;
+    -fx-padding: 9px 26px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.25), 12, 0, 0, 4);
+}
+
+.botao-next:hover {
+    -fx-background-color: #ffffff;
+    -fx-effect: dropshadow(gaussian, rgba(255, 255, 255, 0.25), 16, 0, 0, 4);
+}

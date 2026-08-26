@@ -1,7 +1,5 @@
-@"
 .idea/
 .myollamaenhancer/
 target/
 *.iml
 .env
-"@ | Out-File -Encoding utf8 .gitignore

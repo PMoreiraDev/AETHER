@@ -67,7 +67,7 @@
                 <version>0.0.8</version>
 
                 <configuration>
-                    <mainClass>Main</mainClass>
+                    <mainClass>LauncherApp</mainClass>
                 </configuration>
 
             </plugin>
