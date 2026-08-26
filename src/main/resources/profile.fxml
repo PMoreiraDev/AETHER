@@ -81,7 +81,7 @@
                         <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
                             <children>
                                 <HBox spacing="6" alignment="CENTER_LEFT">
-                                    <Label text="🏷️" styleClass="label-campo"/>
+                                    <Label text="💬" styleClass="label-campo"/>
                                     <Label text="What should AETHER call you?" styleClass="label-campo"/>
                                 </HBox>
                                 <TextField fx:id="preferredNameInput" promptText="Alias / Nickname" styleClass="campo-texto"/>

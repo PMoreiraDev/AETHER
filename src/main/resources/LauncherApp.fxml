@@ -25,7 +25,7 @@
 
     <children>
 
-        <!-- Fundo: céu noturno com montanhas -->
+        <!-- Fundo: imagem ajustada dinamicamente pelo controlador em full screen -->
         <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true">
             <image>
                 <Image url="images/background.jpg"/>
