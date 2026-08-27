@@ -1,110 +1,80 @@
 package controller;
 
-import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
-
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-import javafx.stage.Stage;
+import util.Navigator;
 
-import util.WindowUtils;
-
+/**
+ * Controlador do ecrã de arranque do AETHER ({@code LauncherApp.fxml}).
+ * <p>
+ * Ajusta a imagem de fundo às dimensões da janela e navega para o ecrã de
+ * perfil quando o utilizador clica em "Start AETHER".
+ * </p>
+ *
+ * @author Paulo Moreira
+ * @version 1.0
+ */
 public class LauncherController implements Initializable {
 
+    /**
+     * Cria o controlador. Instanciado pelo {@link javafx.fxml.FXMLLoader}.
+     */
+    public LauncherController() {
+        // Construtor por omissão explícito, documentado para o Javadoc.
+    }
+
+    /** Caminho do ecrã de perfil (passo 1) no classpath. */
+    private static final String PROFILE_VIEW = "/FXML/profile.fxml";
+
+    /** Painel raiz do ecrã, usado como referência de dimensões e de janela. */
     @FXML
     private StackPane rootPane;
 
+    /** Imagem de fundo, redimensionada dinamicamente. */
     @FXML
     private ImageView backgroundImageView;
 
+    /** Botão que inicia o fluxo de onboarding. */
     @FXML
     private Button startButton;
 
-    private double dragAnchorX;
-    private double dragAnchorY;
-
+    /**
+     * Liga as dimensões da imagem de fundo às da janela, garantindo que o fundo
+     * cobre todo o ecrã em qualquer redimensionamento.
+     *
+     * @param location o URL do FXML carregado, ou {@code null} se não conhecido
+     * @param resources o pacote de recursos de localização, ou {@code null} se não usado
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        // Liga a largura e altura da imagem às dimensões exatas da janela
         if (backgroundImageView != null && rootPane != null) {
             backgroundImageView.fitWidthProperty().bind(rootPane.widthProperty());
             backgroundImageView.fitHeightProperty().bind(rootPane.heightProperty());
         }
-
-        // Suporte para arrastar a janela
-        rootPane.setOnMousePressed(this::handleDragPressed);
-        rootPane.setOnMouseDragged(this::handleDragDragged);
-    }
-
-    private void handleDragPressed(MouseEvent event) {
-        Stage stage = getStage();
-        if (stage != null) {
-            dragAnchorX = event.getScreenX() - stage.getX();
-            dragAnchorY = event.getScreenY() - stage.getY();
-        }
-    }
-
-    private void handleDragDragged(MouseEvent event) {
-        Stage stage = getStage();
-        if (stage != null) {
-            stage.setX(event.getScreenX() - dragAnchorX);
-            stage.setY(event.getScreenY() - dragAnchorY);
-        }
     }
 
     /**
-     * Reage ao clique no botão "START AETHER" e navega para a tela de perfil mantendo a barra de vidro.
+     * Reage ao clique em "START AETHER" e avança para o ecrã de perfil,
+     * mantendo a moldura Glassmorphism da janela atual.
+     *
+     * @param event o evento de ação gerado pelo botão
      */
     @FXML
     private void handleStartAether(ActionEvent event) {
-        try {
-            URL profileResource = getClass().getResource("/profile.fxml");
-
-            if (profileResource == null) {
-                System.err.println("[AETHER Erro] Ficheiro '/profile.fxml' não foi encontrado na pasta de recursos.");
-                return;
-            }
-
-            FXMLLoader loader = new FXMLLoader(profileResource);
-            Parent profileRoot = loader.load();
-
-            Stage stage = getStage();
-            if (stage != null) {
-                Scene currentScene = stage.getScene();
-
-                // Se a janela já tiver a estrutura de vidro, substitui apenas o conteúdo interior (Center)
-                if (currentScene != null && currentScene.getRoot() instanceof BorderPane) {
-                    BorderPane glassContainer = (BorderPane) currentScene.getRoot();
-                    glassContainer.setCenter(profileRoot);
-                } else {
-                    // Caso contrário, recria a janela envolta na barra Glassmorphic
-                    stage.setScene(WindowUtils.makeGlassWindow(stage, profileRoot, "AETHER"));
-                }
-            }
-
-        } catch (IOException e) {
-            System.err.println("[AETHER Erro] Falha ao carregar a vista de perfil (profile.fxml): " + e.getMessage());
-            e.printStackTrace();
+        if (startButton != null) {
+            startButton.setDisable(true);
         }
-    }
 
-    /**
-     * Obtém a referência da Stage atual de forma segura.
-     */
-    private Stage getStage() {
-        if (rootPane != null && rootPane.getScene() != null) {
-            return (Stage) rootPane.getScene().getWindow();
+        boolean navigated = Navigator.navigate(rootPane, PROFILE_VIEW);
+
+        if (!navigated && startButton != null) {
+            startButton.setDisable(false);
         }
-        return null;
     }
 }

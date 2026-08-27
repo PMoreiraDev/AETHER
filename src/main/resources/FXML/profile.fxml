@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!--
+    profile.fxml
+    ============
+    Passo 1 do onboarding: criação do perfil do utilizador.
+    Controlador: controller.ProfileController
+-->
+
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -22,17 +29,16 @@
            xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="controller.ProfileController"
-           styleClass="root-pane"
-           stylesheets="@Style.css">
+           styleClass="root-pane">
 
     <children>
         <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true">
             <image>
-                <Image url="images/background.jpg"/>
+                <Image url="@../images/background.jpg"/>
             </image>
         </ImageView>
 
-        <!-- Card Central com largura ligeiramente expandida (720px) -->
+        <!-- Cartão central do formulário -->
         <VBox alignment="TOP_LEFT" maxWidth="720" maxHeight="620" spacing="20" styleClass="card-perfil">
             <padding>
                 <Insets top="32" right="36" bottom="28" left="36"/>
@@ -49,23 +55,27 @@
                             </children>
                         </TextFlow>
                         <Label text="Let's get to know you" styleClass="subtitulo-perfil"/>
-                        <Label text="This information helps AETHER understand who it's organizing information for." styleClass="descricao-perfil"/>
+                        <Label text="This information helps AETHER understand who it's organizing information for."
+                               styleClass="descricao-perfil" wrapText="true"/>
                     </children>
                 </VBox>
 
-                <!-- Formulário com Colunas de 50% de Largura -->
+                <!-- Formulário em duas colunas iguais -->
                 <GridPane hgap="24" vgap="16">
                     <columnConstraints>
-                        <ColumnConstraints percentWidth="50" />
-                        <ColumnConstraints percentWidth="50" />
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
                     </columnConstraints>
                     <children>
-                        <!-- Campo: Name -->
+
+                        <!-- Campo: Name (obrigatorio) -->
                         <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
                             <children>
-                                <HBox spacing="6" alignment="CENTER_LEFT">
-                                    <Label text="👤" styleClass="label-campo"/>
-                                    <Label text="Name" styleClass="label-campo"/>
+                                <HBox spacing="4" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Label text="Name" styleClass="label-campo"/>
+                                        <Label text="*" styleClass="label-obrigatorio"/>
+                                    </children>
                                 </HBox>
                                 <TextField fx:id="fullNameInput" promptText="Full Name" styleClass="campo-texto"/>
                             </children>
@@ -75,72 +85,87 @@
                         <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
                             <children>
                                 <HBox spacing="6" alignment="CENTER_LEFT">
-                                    <Label text="📅" styleClass="label-campo"/>
-                                    <Label text="Birthday" styleClass="label-campo"/>
-                                    <Label text="(optional)" styleClass="label-opcional"/>
+                                    <children>
+                                        <Label text="Birthday" styleClass="label-campo"/>
+                                        <Label text="(optional)" styleClass="label-opcional"/>
+                                    </children>
                                 </HBox>
-                                <TextField fx:id="birthdayInput" promptText="DD / MM / YYYY" styleClass="campo-texto"/>
+                                <TextField fx:id="birthdayInput" promptText="D / M / YYYY" styleClass="campo-texto"/>
                             </children>
                         </VBox>
 
-                        <!-- Campo: Preferred Name (Label otimizado) -->
+                        <!-- Campo: Preferred Name (obrigatorio) -->
                         <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
                             <children>
-                                <HBox spacing="6" alignment="CENTER_LEFT">
-                                    <Label text="💬" styleClass="label-campo"/>
-                                    <Label text="Preferred Name" styleClass="label-campo"/>
+                                <HBox spacing="4" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Label text="Preferred Name" styleClass="label-campo"/>
+                                        <Label text="*" styleClass="label-obrigatorio"/>
+                                    </children>
                                 </HBox>
-                                <TextField fx:id="preferredNameInput" promptText="What should AETHER call you?" styleClass="campo-texto"/>
+                                <TextField fx:id="preferredNameInput" promptText="What should AETHER call you?"
+                                           styleClass="campo-texto"/>
                             </children>
                         </VBox>
 
-                        <!-- Campo: Occupation / Tags (Com FlowPane para quebra fluida) -->
+                        <!-- Campo: Occupation / Role (tags geradas pelo controlador) -->
                         <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
                             <children>
                                 <HBox spacing="6" alignment="CENTER_LEFT">
-                                    <Label text="💼" styleClass="label-campo"/>
-                                    <Label text="Occupation / Role" styleClass="label-campo"/>
-                                    <Label text="(optional)" styleClass="label-opcional"/>
+                                    <children>
+                                        <Label text="Occupation / Role" styleClass="label-campo"/>
+                                        <Label text="(optional)" styleClass="label-opcional"/>
+                                    </children>
                                 </HBox>
-                                <FlowPane fx:id="occupationTagsBox" hgap="8" vgap="8" prefWrapLength="300">
-                                    <!-- Tags dinâmicas geradas sem truncagem -->
-                                </FlowPane>
+                                <FlowPane fx:id="occupationTagsBox" hgap="8" vgap="8" prefWrapLength="300"/>
                             </children>
                         </VBox>
+
                     </children>
                 </GridPane>
 
-                <!-- Campo: About You -->
+                <!-- Campo: About you -->
                 <VBox spacing="6">
                     <children>
                         <HBox spacing="6" alignment="CENTER_LEFT">
-                            <Label text="About you" styleClass="label-campo"/>
-                            <Label text="(optional)" styleClass="label-opcional"/>
+                            <children>
+                                <Label text="About you" styleClass="label-campo"/>
+                                <Label text="(optional)" styleClass="label-opcional"/>
+                            </children>
                         </HBox>
-                        <TextArea fx:id="aboutYouInput" promptText="Tell AETHER a little about yourself..." prefRowCount="3" wrapText="true" styleClass="area-texto"/>
+                        <TextArea fx:id="aboutYouInput" promptText="Tell AETHER a little about yourself..."
+                                  prefRowCount="3" wrapText="true" styleClass="area-texto"/>
                     </children>
                 </VBox>
 
+                <!-- [CORRIGIDO] Mensagem de validação. Ocupa espaço fixo mesmo
+                     quando invisível, para o rodapé não saltar ao aparecer. -->
+                <Label fx:id="validationLabel" text="" styleClass="mensagem-erro"
+                       wrapText="true" visible="false" minHeight="16"/>
+
                 <Region VBox.vgrow="ALWAYS"/>
 
-                <!-- Rodapé -->
+                <!-- Rodapé: indicador de passos e navegação -->
                 <VBox spacing="14">
                     <children>
                         <HBox alignment="CENTER" spacing="12">
                             <children>
-                                <Label text="1" styleClass="texto-passos texto-passo-ativo"/>
-                                <Line startX="0" endX="30" styleClass="linha-progresso"/>
+                                <Label text="1" styleClass="texto-passos, texto-passo-ativo"/>
+                                <Line startX="0" endX="30" styleClass="linha-progresso, linha-progresso-ativa"/>
                                 <Label text="2" styleClass="texto-passos"/>
                                 <Line startX="0" endX="30" styleClass="linha-progresso"/>
                                 <Label text="3" styleClass="texto-passos"/>
                             </children>
                         </HBox>
 
+                        <!-- [CORRIGIDO] Removido o botão "Skip for now": a criação
+                             do perfil passou a ser obrigatória. -->
                         <HBox alignment="CENTER_LEFT">
                             <children>
-                                <Button text="Skip for now" onAction="#handleSkip" styleClass="link-skip"/>
+                                <Label text="* Required fields" styleClass="label-opcional"/>
                                 <Region HBox.hgrow="ALWAYS"/>
-                                <Button text="Next →" onAction="#handleNext" styleClass="botao-next"/>
+                                <Button fx:id="nextStepButton" text="Next →" onAction="#handleNext"
+                                        styleClass="botao-next"/>
                             </children>
                         </HBox>
                     </children>

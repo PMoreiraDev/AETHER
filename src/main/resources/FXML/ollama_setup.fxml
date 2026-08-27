@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    ollama_setup.fxml
+    =================
+    Passo 2 do onboarding: instalação do motor local e gestão de modelos.
+    Controlador: controller.OllamaSetUpController
+
+    A estrutura acompanha ponto por ponto a do passo 1 (profile.fxml): o mesmo
+    fundo, o mesmo cartão de vidro com as mesmas dimensões, margens e
+    espaçamentos, a mesma hierarquia de títulos, grupos de "label + controlo"
+    sem caixas intermédias e o mesmo rodapé com o indicador de passos e a
+    navegação.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.Line?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
+
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="controller.OllamaSetUpController"
+           styleClass="root-pane">
+
+    <children>
+        <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true">
+            <image>
+                <Image url="@../images/background.jpg"/>
+            </image>
+        </ImageView>
+
+        <!-- Cartão central: mesmas dimensões e margens do passo 1. -->
+        <VBox alignment="TOP_LEFT" maxWidth="720" maxHeight="620" spacing="20" styleClass="card-perfil">
+            <padding>
+                <Insets top="32" right="36" bottom="28" left="36"/>
+            </padding>
+            <children>
+
+                <!-- Cabeçalho: mesma composição do passo 1. -->
+                <VBox spacing="6">
+                    <children>
+                        <TextFlow>
+                            <children>
+                                <Text text="2. " styleClass="titulo-passo-numero"/>
+                                <Text text="Set up Local AI" styleClass="titulo-passo-texto"/>
+                            </children>
+                        </TextFlow>
+                        <Label text="Bring life do AETHER" styleClass="subtitulo-perfil"/>
+                        <Label text="Install the local engine and download a language model matched to your hardware."
+                               styleClass="descricao-perfil" wrapText="true"/>
+                    </children>
+                </VBox>
+
+                <!-- Grupos "label + controlo", no mesmo estilo dos campos do passo 1. -->
+                <VBox spacing="14" VBox.vgrow="ALWAYS">
+                    <children>
+
+                        <!-- Motor local -->
+                        <VBox spacing="6">
+                            <children>
+                                <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Label text="Local AI Engine" styleClass="label-campo"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Circle fx:id="engineStatusDot" radius="4" styleClass="indicador-pendente"/>
+                                        <Label fx:id="serviceStatusBadge" text="Checking..." styleClass="status-badge"/>
+                                    </children>
+                                </HBox>
+                                <HBox spacing="14" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Button fx:id="installOllamaButton" text="Install Ollama"
+                                                onAction="#handleInstallOllama" styleClass="botao-primario"/>
+                                        <Label text="Required to run models offline, fully on this device."
+                                               styleClass="descricao-perfil" wrapText="true" HBox.hgrow="ALWAYS"/>
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                        <!-- Modelo recomendado -->
+                        <VBox spacing="6">
+                            <children>
+                                <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Label text="Recommended Model" styleClass="label-campo"/>
+                                        <Label text="(matched to your hardware)" styleClass="label-opcional"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="ramHardwareBadge" text="RAM: —" styleClass="hardware-badge"/>
+                                    </children>
+                                </HBox>
+                                <HBox spacing="12" alignment="CENTER_LEFT">
+                                    <children>
+                                        <ComboBox fx:id="modelComboBox" styleClass="combo-box-glass"
+                                                  promptText="Select a model..." maxWidth="Infinity"
+                                                  HBox.hgrow="ALWAYS"/>
+                                        <Button fx:id="downloadModelButton" text="Download"
+                                                onAction="#handleDownloadModel" styleClass="botao-primario"/>
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                        <!-- Modelos instalados: a lista absorve o espaço livre do
+                             cartão, para que a altura total iguale a do passo 1. -->
+                        <VBox spacing="6" VBox.vgrow="ALWAYS">
+                            <children>
+                                <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Label text="Models on This Device" styleClass="label-campo"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Button fx:id="uninstallModelButton" text="Remove"
+                                                onAction="#handleUninstallModel" styleClass="botao-perigo"/>
+                                        <Button fx:id="refreshModelsButton" text="Refresh"
+                                                onAction="#handleRefreshModels" styleClass="botao-secundario"/>
+                                    </children>
+                                </HBox>
+                                <ListView fx:id="installedModelsListView" minHeight="62" prefHeight="62"
+                                          VBox.vgrow="ALWAYS" styleClass="lista-modelos"/>
+                            </children>
+                        </VBox>
+
+                        <!-- Estado e progresso da operação em curso, numa única linha -->
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <children>
+                                <Circle fx:id="statusIndicatorDot" radius="4" styleClass="indicador-pendente"/>
+                                <Label fx:id="statusLabel" text="AETHER is ready."
+                                       styleClass="descricao-perfil" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                <ProgressBar fx:id="progressBar" progress="0" prefHeight="8" prefWidth="150"
+                                             styleClass="custom-progress-bar"/>
+                                <Label fx:id="progressPercentLabel" text="0%" styleClass="percentagem-label"/>
+                            </children>
+                        </HBox>
+
+                    </children>
+                </VBox>
+
+                <!-- Rodapé: indicador de passos e navegação, igual ao do passo 1. -->
+                <VBox spacing="14">
+                    <children>
+                        <HBox alignment="CENTER" spacing="12">
+                            <children>
+                                <Label text="1" styleClass="texto-passos"/>
+                                <Line startX="0" endX="30" styleClass="linha-progresso, linha-progresso-ativa"/>
+                                <Label text="2" styleClass="texto-passos, texto-passo-ativo"/>
+                                <Line startX="0" endX="30" styleClass="linha-progresso"/>
+                                <Label text="3" styleClass="texto-passos"/>
+                            </children>
+                        </HBox>
+
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Button text="← Previous" onAction="#handlePrevious" styleClass="link-skip"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="nextStepButton" text="Next →" onAction="#handleNext"
+                                        styleClass="botao-next"/>
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+
+            </children>
+        </VBox>
+    </children>
+</StackPane>

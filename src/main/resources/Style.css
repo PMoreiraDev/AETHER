@@ -1,6 +1,13 @@
 /* =====================================================================
    AETHER — SYSTEM DESIGN & STYLESHEET
    Ficheiro: Style.css
+
+   NOTAS DE CORRECAO (revisao tecnica):
+   Este ficheiro mantem o design, a paleta e os nomes de classes originais.
+   Foram apenas removidas ou ajustadas as propriedades que o motor de CSS do
+   JavaFX nao suporta (e que por isso eram silenciosamente ignoradas), e
+   acrescentada a seccao 7 com as classes que o codigo usava mas que ainda
+   nao estavam definidas. Cada correcao esta assinalada com "[CORRIGIDO]".
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -61,12 +68,13 @@
     -fx-effect: dropshadow(gaussian, #818cf8, 10, 0.7, 0, 0);
 }
 
+/* [CORRIGIDO] Removido "-fx-letter-spacing": nao existe no CSS do JavaFX.
+   O espacamento das letras e obtido no texto do FXML ("S T A R T ..."). */
 .texto-start {
     -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
     -fx-font-size: 13px;
     -fx-font-weight: bold;
     -fx-text-fill: #ffffff;
-    -fx-letter-spacing: 2px;
 }
 
 .seta-start {
@@ -171,9 +179,16 @@
     -fx-background-color: rgba(10, 15, 26, 0.65);
 }
 
-/* Configuração e Remoção do Fundo Branco da TextArea */
+/* Configuração e Remoção do Fundo Branco da TextArea
+   [CORRIGIDO] Removido "!important" (desnecessario: uma folha de estilo do
+   autor tem sempre prioridade sobre a folha interna do JavaFX) e o fundo
+   passou a ser desenhado apenas pelo ".content", para nao aparecer a moldura
+   dupla que o ScrollPane interno provocava. */
 .area-texto {
     -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
     -fx-text-fill: #f8fafc;
     -fx-text-inner-color: #f8fafc;
     -fx-prompt-text-fill: #64748b;
@@ -182,30 +197,31 @@
 }
 
 .area-texto .scroll-pane,
-.area-texto .scroll-pane .viewport,
+.area-texto .scroll-pane .viewport {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
 .area-texto .content {
-    -fx-background-color: rgba(10, 15, 26, 0.45) !important;
+    -fx-background-color: rgba(10, 15, 26, 0.45);
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
     -fx-border-color: rgba(255, 255, 255, 0.14);
     -fx-border-width: 1px;
-}
-
-.area-texto .content {
     -fx-padding: 10px 14px;
 }
 
 .area-texto:focused .content {
     -fx-border-color: rgba(129, 140, 248, 0.6);
-    -fx-background-color: rgba(10, 15, 26, 0.65) !important;
+    -fx-background-color: rgba(10, 15, 26, 0.65);
 }
 
 .area-texto .text {
-    -fx-fill: #f8fafc !important;
+    -fx-fill: #f8fafc;
 }
 
 .area-texto:focused .text {
-    -fx-fill: #f8fafc !important;
+    -fx-fill: #f8fafc;
 }
 
 /* Tags de Ocupação (Pills) */
@@ -226,12 +242,14 @@
     -fx-border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Tag Selecionada (Destaque Ativo) */
+/* Tag Selecionada (Destaque Ativo)
+   [CORRIGIDO] Removido "!important": esta regra vem depois de ".pill-tag",
+   por isso ja ganha por ordem de declaracao. */
 .pill-tag-selected {
-    -fx-background-color: #818cf8 !important;
-    -fx-text-fill: #ffffff !important;
+    -fx-background-color: #818cf8;
+    -fx-text-fill: #ffffff;
     -fx-font-weight: bold;
-    -fx-border-color: #a5b4fc !important;
+    -fx-border-color: #a5b4fc;
     -fx-border-width: 1px;
     -fx-effect: dropshadow(gaussian, rgba(129, 140, 248, 0.6), 12, 0, 0, 0);
 }
@@ -251,6 +269,7 @@
     -fx-background-color: rgba(255, 255, 255, 0.16);
     -fx-text-fill: #ffffff;
 }
+
 /* Navegação e Linha de Progresso */
 .linha-progresso {
     -fx-stroke: rgba(255, 255, 255, 0.12);
@@ -268,8 +287,9 @@
     -fx-text-fill: #64748b;
 }
 
+/* [CORRIGIDO] Removido "-fx-font-color": nao e uma propriedade do JavaFX
+   (a cor do texto e definida por "-fx-text-fill"). */
 .texto-passo-ativo {
-    -fx-font-color : rgba(129, 140, 248, 0.25);
     -fx-font-weight: bold;
     -fx-text-fill: #ffffff;
 }
@@ -308,7 +328,6 @@
 /* ---------------------------------------------------------------------
    4. Modal Customizada AETHER
    --------------------------------------------------------------------- */
-/* Modal Customizada AETHER */
 .custom-dialog-pane {
     -fx-background-color: #0f172a;
     -fx-border-color: rgba(255, 255, 255, 0.15);
@@ -383,13 +402,15 @@
     -fx-text-fill: rgba(248, 250, 252, 0.6);
 }
 
-/* Botões circulares (Bolas de Controlo iOS) */
+/* Botões circulares (Bolas de Controlo iOS)
+   [CORRIGIDO] "-fx-background-radius: 50%" foi trocado por "6px": o JavaFX
+   nao aceita percentagens em raios, pelo que as bolas ficavam quadradas. */
 .window-dot {
     -fx-min-width: 12px;
     -fx-max-width: 12px;
     -fx-min-height: 12px;
     -fx-max-height: 12px;
-    -fx-background-radius: 50%;
+    -fx-background-radius: 6px;
     -fx-padding: 0;
     -fx-cursor: hand;
     -fx-border-width: 0;
@@ -417,4 +438,359 @@
 }
 .dot-maximize:hover {
     -fx-background-color: #1aab29;
+}
+
+/* ===============================================
+   6. CLASSES DE ESTADO E PROGRESSO
+   =============================================== */
+
+/* Badge de Hardware (RAM) */
+.hardware-badge {
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(129, 140, 248, 0.15);
+    -fx-background-radius: 8;
+    -fx-padding: 6 12;
+    -fx-border-color: rgba(129, 140, 248, 0.3);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+/* Badge de Estado (Connection) */
+.status-badge {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 8;
+    -fx-padding: 6 12;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 8;
+    -fx-border-width: 1;
+}
+
+/* Botão Primário (Ação Principal) */
+.botao-primario {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-color: #6366f1;
+    -fx-background-radius: 10;
+    -fx-padding: 12 24;
+    -fx-cursor: hand;
+}
+.botao-primario:hover {
+    -fx-background-color: #4f46e5;
+}
+.botao-primario:armed {
+    -fx-background-color: #4338ca;
+}
+
+/* ComboBox Glassmorphism */
+.combo-box-glass {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 14px;
+}
+.combo-box-glass .box {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 6 10;
+}
+.combo-box-glass .list-cell {
+    -fx-text-fill: #ffffff;
+    -fx-padding: 8 12;
+}
+.combo-box-glass .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 8;
+}
+.combo-box-glass .arrow {
+    -fx-background-color: #94a3b8;
+}
+
+/* ProgressBar Customizada */
+.custom-progress-bar {
+    -fx-accent: #818cf8;
+    -fx-control-inner-background: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-pref-height: 8;
+}
+.custom-progress-bar > .track {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 6;
+}
+.custom-progress-bar > .bar {
+    -fx-background-color: #818cf8;
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+    -fx-padding: 4px;
+}
+/* [CORRIGIDO] Em modo indeterminado o JavaFX usa uma regra propria para a
+   barra; sem esta declaracao a barra aparecia cinzenta durante as tarefas. */
+.custom-progress-bar:indeterminate > .bar {
+    -fx-background-color: linear-gradient(to right, #6366f1, #818cf8);
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+}
+
+/* Badges de Passos do Stepper */
+.step-badge {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 20;
+    -fx-min-width: 32;
+    -fx-min-height: 32;
+    -fx-pref-width: 32;
+    -fx-pref-height: 32;
+    -fx-max-width: 32;
+    -fx-max-height: 32;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+}
+.step-badge-active {
+    -fx-text-fill: #ffffff;
+    -fx-background-color: #6366f1;
+    -fx-border-color: #818cf8;
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-border-width: 1;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-min-width: 32;
+    -fx-min-height: 32;
+    -fx-pref-width: 32;
+    -fx-pref-height: 32;
+}
+
+/* Linha do Stepper */
+.step-line {
+    -fx-stroke: rgba(255, 255, 255, 0.12);
+    -fx-stroke-width: 2;
+}
+
+/* Botão de Ação Destrutiva (Desinstalar) */
+.botao-perigo {
+    -fx-background-color: rgba(239, 68, 68, 0.12);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(239, 68, 68, 0.35);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-text-fill: #fca5a5;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 600;
+    -fx-padding: 8 18;
+    -fx-cursor: hand;
+}
+.botao-perigo:hover {
+    -fx-background-color: rgba(239, 68, 68, 0.2);
+    -fx-border-color: rgba(239, 68, 68, 0.5);
+    -fx-text-fill: #ffffff;
+}
+.botao-perigo:armed {
+    -fx-background-color: rgba(239, 68, 68, 0.3);
+}
+.botao-perigo:disabled {
+    -fx-opacity: 0.35;
+    -fx-cursor: default;
+}
+
+/* ===============================================
+   7. CLASSES COMPLEMENTARES (usadas pelo código
+      mas que ainda não estavam definidas)
+   =============================================== */
+
+/* Popup da ComboBox.
+   [CORRIGIDO] O popup da ComboBox vive numa janela propria, por isso as
+   regras aninhadas ".combo-box-glass .combo-box-popup ..." nunca chegavam a
+   aplicar-se. Passaram a ser seletores de topo, que e a forma correta. */
+.combo-box-popup .list-view {
+    -fx-background-color: #0f1729;
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ffffff;
+    -fx-padding: 8 12;
+}
+.combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: rgba(129, 140, 248, 0.2);
+}
+.combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: rgba(129, 140, 248, 0.3);
+    -fx-text-fill: #ffffff;
+}
+
+/* Cartão interior, usado nas três secções do ecrã de setup. */
+.card-interior {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-border-color: rgba(255, 255, 255, 0.10);
+    -fx-border-width: 1px;
+}
+
+/* Botão secundário (ações neutras, como "Refresh"). */
+.botao-secundario {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 12.5px;
+    -fx-font-weight: 600;
+    -fx-padding: 8 18;
+    -fx-cursor: hand;
+}
+.botao-secundario:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.16);
+    -fx-text-fill: #ffffff;
+}
+.botao-secundario:disabled {
+    -fx-opacity: 0.35;
+    -fx-cursor: default;
+}
+
+/* Estados desativados dos restantes botões. */
+.botao-primario:disabled,
+.botao-next:disabled,
+.combo-box-glass:disabled {
+    -fx-opacity: 0.4;
+    -fx-cursor: default;
+}
+
+/* Separador fino entre o título e o conteúdo de cada secção. */
+.divisor-fino {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Variantes de cor do badge de estado (aplicadas pelo controlador). */
+.status-badge-sucesso {
+    -fx-text-fill: #86efac;
+    -fx-background-color: rgba(34, 197, 94, 0.14);
+    -fx-border-color: rgba(34, 197, 94, 0.35);
+}
+.status-badge-erro {
+    -fx-text-fill: #fca5a5;
+    -fx-background-color: rgba(239, 68, 68, 0.14);
+    -fx-border-color: rgba(239, 68, 68, 0.35);
+}
+
+/* Indicadores circulares de estado. */
+.indicador-pendente {
+    -fx-fill: #fbbf24;
+    -fx-effect: dropshadow(gaussian, rgba(251, 191, 36, 0.7), 8, 0.5, 0, 0);
+}
+.indicador-sucesso {
+    -fx-fill: #22c55e;
+    -fx-effect: dropshadow(gaussian, rgba(34, 197, 94, 0.7), 8, 0.5, 0, 0);
+}
+.indicador-erro {
+    -fx-fill: #ef4444;
+    -fx-effect: dropshadow(gaussian, rgba(239, 68, 68, 0.7), 8, 0.5, 0, 0);
+}
+
+/* Rodapé de progresso do ecrã de setup. */
+.rodape-progresso-wrapper {
+    -fx-background-color: rgba(10, 15, 26, 0.35);
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1px;
+}
+
+.percentagem-label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #94a3b8;
+    -fx-min-width: 40px;
+}
+
+/* Lista de modelos instalados. */
+.lista-modelos {
+    -fx-background-color: rgba(10, 15, 26, 0.35);
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.10);
+    -fx-border-width: 1px;
+}
+.lista-modelos .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 13px;
+    -fx-padding: 8 12;
+}
+.lista-modelos .list-cell:filled:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+}
+.lista-modelos .list-cell:filled:selected {
+    -fx-background-color: rgba(129, 140, 248, 0.28);
+    -fx-text-fill: #ffffff;
+}
+.lista-modelos .placeholder .label {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 13px;
+}
+.lista-modelos .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+.lista-modelos .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.18);
+    -fx-background-radius: 6px;
+}
+
+/* [CORRIGIDO] Tooltip com o mesmo tema da aplicacao. Sem esta regra, o JavaFX
+   desenha uma caixa clara que contrasta com o resto do onboarding. */
+.tooltip {
+    -fx-background-color: rgba(15, 23, 42, 0.96);
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 8px;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 12px;
+    -fx-padding: 8 12;
+}
+
+/* [CORRIGIDO] Validacao obrigatoria do passo 1. O perfil deixou de ser
+   ignoravel ("Skip for now" removido), pelo que os campos obrigatorios passam a
+   precisar de marcacao visual e de mensagem de erro. */
+
+.label-obrigatorio {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #f87171;
+}
+
+.campo-texto-erro {
+    -fx-border-color: rgba(239, 68, 68, 0.75);
+    -fx-background-color: rgba(69, 10, 10, 0.35);
+}
+
+.campo-texto-erro:focused {
+    -fx-border-color: rgba(248, 113, 113, 0.95);
+}
+
+.mensagem-erro {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #fca5a5;
 }

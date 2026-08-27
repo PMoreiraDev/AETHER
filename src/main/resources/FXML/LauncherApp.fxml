@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!--
-    launcher.fxml
-    ==============
-    Vista (View) do ecrã de arranque do AETHER, no padrão MVC do projeto.
+    LauncherApp.fxml
+    ================
+    Vista do ecrã de arranque do AETHER (padrão MVC).
+    Controlador: controller.LauncherController
 -->
 
 <?import javafx.geometry.Insets?>
@@ -20,19 +21,18 @@
            xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="controller.LauncherController"
-           styleClass="root-pane"
-           stylesheets="@Style.css">
+           styleClass="root-pane">
 
     <children>
 
-        <!-- Fundo: imagem ajustada dinamicamente pelo controlador em full screen -->
+        <!-- Fundo: dimensionado pelo controlador para cobrir toda a janela. -->
         <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true">
             <image>
-                <Image url="images/background.jpg"/>
+                <Image url="@../images/background.jpg"/>
             </image>
         </ImageView>
 
-        <!-- Conteúdo principal: logótipo, botão e rodapé, centrados no ecrã -->
+        <!-- Conteúdo principal: logótipo, botão de arranque e rodapé. -->
         <VBox alignment="CENTER" spacing="40" styleClass="conteudo-central">
             <padding>
                 <Insets bottom="70"/>
@@ -42,16 +42,16 @@
                 <!-- Logótipo AETHER -->
                 <ImageView fitWidth="360" preserveRatio="true" smooth="true" styleClass="logo-imagem">
                     <image>
-                        <Image url="images/aether_logo_mark.png"/>
+                        <Image url="@../images/aether_logo_mark.png"/>
                     </image>
                 </ImageView>
 
-                <!-- Botão principal: ícone + texto + seta -->
+                <!-- Botão principal: indicador + texto + seta -->
                 <Button fx:id="startButton" onAction="#handleStartAether" styleClass="botao-start">
                     <graphic>
                         <HBox alignment="CENTER" spacing="16">
                             <children>
-                                <Circle fx:id="indicadorStart" radius="4" styleClass="indicador-start"/>
+                                <Circle radius="4" styleClass="indicador-start"/>
                                 <Label text="S T A R T   A E T H E R" styleClass="texto-start"/>
                                 <Label text="→" styleClass="seta-start"/>
                             </children>
@@ -59,8 +59,8 @@
                     </graphic>
                 </Button>
 
-                <!-- Rodapé: cadeado + texto informativo -->
-                <HBox fx:id="footerBox" alignment="CENTER" spacing="8" styleClass="rodape">
+                <!-- Rodapé informativo de privacidade -->
+                <HBox alignment="CENTER" spacing="8" styleClass="rodape">
                     <children>
                         <Label text="🔒" styleClass="icone-cadeado"/>
                         <Label text="Everything stays on your device." styleClass="rodape-texto"/>
