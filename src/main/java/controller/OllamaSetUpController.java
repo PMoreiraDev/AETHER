@@ -22,11 +22,11 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Circle;
+import session.UserSession;
 import util.Navigator;
 import util.OllamaService;
 import util.StyleUtils;
 import util.SystemInfo;
-
 /**
  * Controlador do passo 2 do onboarding — configuração do Ollama
  * ({@code ollama_setup.fxml}).
@@ -221,17 +221,39 @@ public class OllamaSetUpController {
     }
 
     /**
-     * Avança para o passo seguinte do onboarding.
+     * Saves the selected Ollama model and advances to the next setup step.
      * <p>
-     * Enquanto {@link #NEXT_STEP_VIEW} for {@code null}, informa o utilizador de
-     * que o passo 3 ainda está em construção em vez de navegar. Basta preencher
-     * essa constante para o botão passar a abrir o ecrã seguinte.
+     * The Step 3 screen is not implemented yet, so the selected model is saved
+     * before showing the temporary "coming soon" message.
      * </p>
      */
     @FXML
     private void handleNext() {
+        String selectedModel = modelComboBox.getValue();
+
+        if (selectedModel == null || selectedModel.isBlank()) {
+            setStatus(
+                    "Select a model before continuing.",
+                    DOT_ERROR_CLASS
+            );
+            return;
+        }
+
+        UserSession session = UserSession.getInstance();
+
+        session.getAppSettings().setActiveModelId(selectedModel);
+
+        if (!session.saveAppSettings()) {
+            setStatus(
+                    "Couldn't save the selected model.",
+                    DOT_ERROR_CLASS
+            );
+            return;
+        }
+
+        LOGGER.info(() -> "Selected Ollama model saved: " + selectedModel);
+
         if (NEXT_STEP_VIEW == null) {
-            LOGGER.info("Passo 3 ainda não implementado: apresentado aviso ao utilizador.");
             showComingSoonNotice();
             return;
         }
@@ -319,6 +341,13 @@ public class OllamaSetUpController {
      */
     private void selectSuggestedModel() {
         if (modelComboBox.getItems().isEmpty() || modelComboBox.getValue() != null) {
+            updateDownloadButton();
+            return;
+        }
+
+        String savedModel = UserSession.getInstance().getAppSettings().getActiveModelId();
+        if (savedModel != null && !savedModel.isBlank() && modelComboBox.getItems().contains(savedModel)) {
+            modelComboBox.getSelectionModel().select(savedModel);
             updateDownloadButton();
             return;
         }
@@ -476,6 +505,12 @@ public class OllamaSetUpController {
         runTask(() -> OllamaService.downloadModel(selectedModel),
                 success -> {
                     if (success) {
+                        UserSession.getInstance().getAppSettings().setActiveModelId(selectedModel);
+                        if (!UserSession.getInstance().saveAppSettings()) {
+                            setStatus("Model installed, but its selection could not be saved.", DOT_ERROR_CLASS);
+                            updateDownloadButton();
+                            return;
+                        }
                         setStatus("Model " + selectedModel + " is ready to use.", DOT_SUCCESS_CLASS);
                         // A lista de instalados é recarregada: o modelo passa a
                         // aparecer marcado como "installed" na recomendação, sem

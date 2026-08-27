@@ -331,9 +331,14 @@ public class ProfileController implements Initializable {
         }
 
         saveProfileToSession();
-        UserProfile profile = UserSession.getInstance().getUserProfile();
-        LOGGER.info(() -> "Perfil guardado na sessão: " + profile);
+        UserSession session = UserSession.getInstance();
+        if (!session.saveUserProfile()) {
+            showValidationMessage("Couldn't save your profile. Check disk permissions and try again.");
+            return;
+        }
 
+        UserProfile profile = session.getUserProfile();
+        LOGGER.info(() -> "Perfil guardado: " + profile);
         Navigator.navigate(rootPane, OLLAMA_SETUP_VIEW);
     }
 

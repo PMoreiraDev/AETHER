@@ -1,36 +1,50 @@
 package session;
 
+import domain.AppSettings;
 import domain.UserProfile;
+import persistence.SqliteAppSettingsRepository;
+import persistence.SqliteUserProfileRepository;
+import repository.AppSettingsRepository;
+import repository.UserProfileRepository;
 
 /**
- * Gestor de sessão Singleton.
- * <p>
- * Mantém os dados globais em memória enquanto a aplicação está em execução.
- * O perfil do utilizador é acessível através de {@link #getUserProfile()}.
- * </p>
+ * Manages the current AETHER user session.
  *
  * @author Paulo Moreira
- * @version 1.0
+ * @version 2.1
  */
 public final class UserSession {
 
-    /** Instância única da sessão, criada de forma preguiçosa. */
+    /** Singleton instance. */
     private static volatile UserSession instance;
 
-    /** Perfil do utilizador ativo nesta sessão; nunca {@code null}. */
+    /** Current user profile. */
     private UserProfile userProfile;
 
+    /** Application settings. */
+    private AppSettings appSettings;
+
+    /** Repository responsible for application settings. */
+    private final AppSettingsRepository appSettingsRepository;
+
+    /** Repository responsible for the user profile. */
+    private final UserProfileRepository userProfileRepository;
+
     /**
-     * Construtor privado para impedir instanciação externa.
+     * Creates a new user session, loading any stored profile and settings.
      */
     private UserSession() {
-        this.userProfile = new UserProfile();
+        this.appSettingsRepository = new SqliteAppSettingsRepository();
+        this.userProfileRepository = new SqliteUserProfileRepository();
+
+        this.userProfile = userProfileRepository.find().orElseGet(UserProfile::new);
+        this.appSettings = appSettingsRepository.load().orElseGet(AppSettings::new);
     }
 
     /**
-     * Devolve a instância única da sessão. Cria-a se ainda não existir.
+     * Returns the singleton session.
      *
-     * @return a instância única de UserSession
+     * @return current user session
      */
     public static synchronized UserSession getInstance() {
         if (instance == null) {
@@ -40,19 +54,69 @@ public final class UserSession {
     }
 
     /**
-     * Devolve o perfil de utilizador da sessão atual.
+     * Returns the current user profile.
      *
-     * @return o perfil de utilizador (nunca {@code null})
+     * @return current user profile
      */
     public UserProfile getUserProfile() {
         return userProfile;
     }
 
     /**
-     * Substitui o perfil da sessão por um novo perfil vazio.
-     * <p>
-     * Usado quando o utilizador escolhe ignorar o passo de perfil no onboarding.
-     * </p>
+     * Replaces the current user profile.
+     *
+     * @param userProfile new user profile
+     */
+    public void setUserProfile(UserProfile userProfile) {
+        this.userProfile = userProfile;
+    }
+
+    /**
+     * Returns the application settings.
+     *
+     * @return application settings
+     */
+    public AppSettings getAppSettings() {
+        return appSettings;
+    }
+
+    /**
+     * Saves the current application settings.
+     *
+     * @return true if saving succeeded
+     */
+    public boolean saveAppSettings() {
+        try {
+            appSettingsRepository.save(appSettings);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Saves the current user profile.
+     *
+     * @return true if saving succeeded
+     */
+    public boolean saveUserProfile() {
+        try {
+            userProfileRepository.save(userProfile);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Resets the application settings in memory.
+     */
+    public void resetAppSettings() {
+        this.appSettings = new AppSettings();
+    }
+
+    /**
+     * Resets the user profile in memory.
      */
     public void resetUserProfile() {
         this.userProfile = new UserProfile();

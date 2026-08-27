@@ -10,6 +10,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import persistence.Database;
+import session.UserSession;
 import util.WindowUtils;
 
 /**
@@ -64,6 +66,8 @@ public class LauncherApp extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
+            handleDevelopmentReset();
+            UserSession.getInstance();
             Parent root = loadLauncherView();
             Scene scene = WindowUtils.makeGlassWindow(primaryStage, root, WINDOW_TITLE);
 
@@ -81,6 +85,16 @@ public class LauncherApp extends Application {
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Falha ao iniciar a aplicação AETHER.", e);
+        }
+    }
+
+    /**
+     * Resets local application data when the developer explicitly enables the reset flag.
+     */
+    private void handleDevelopmentReset() {
+        if (Boolean.parseBoolean(System.getProperty("aether.dev.reset", "false"))) {
+            Database.reset();
+            LOGGER.info("Development reset enabled: local AETHER data was cleared.");
         }
     }
 
