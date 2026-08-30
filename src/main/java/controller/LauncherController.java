@@ -2,23 +2,29 @@ package controller;
 
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.logging.Logger;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
+import session.UserSession;
 import util.Navigator;
 
 /**
  * Controlador do ecrã de arranque do AETHER ({@code LauncherApp.fxml}).
  * <p>
- * Ajusta a imagem de fundo às dimensões da janela e navega para o ecrã de
- * perfil quando o utilizador clica em "Start AETHER".
+ * Ajusta a imagem de fundo às dimensões da janela e, ao clicar em
+ * "START AETHER", decide o destino:
  * </p>
+ * <ul>
+ *   <li>Se o onboarding já estiver concluído, abre o dashboard.</li>
+ *   <li>Caso contrário, abre o passo 1 do setup (perfil).</li>
+ * </ul>
  *
  * @author Paulo Moreira
- * @version 1.0
+ * @version 1.1
  */
 public class LauncherController implements Initializable {
 
@@ -29,8 +35,14 @@ public class LauncherController implements Initializable {
         // Construtor por omissão explícito, documentado para o Javadoc.
     }
 
-    /** Caminho do ecrã de perfil (passo 1) no classpath. */
+    /** Registo de eventos desta classe. */
+    private static final Logger LOGGER = Logger.getLogger(LauncherController.class.getName());
+
+    /** Caminho do ecrã de perfil (passo 1 do setup) no classpath. */
     private static final String PROFILE_VIEW = "/FXML/profile.fxml";
+
+    /** Caminho do dashboard no classpath. */
+    private static final String DASHBOARD_VIEW = "/FXML/dashboard.fxml";
 
     /** Painel raiz do ecrã, usado como referência de dimensões e de janela. */
     @FXML
@@ -40,7 +52,7 @@ public class LauncherController implements Initializable {
     @FXML
     private ImageView backgroundImageView;
 
-    /** Botão que inicia o fluxo de onboarding. */
+    /** Botão que inicia o fluxo do AETHER. */
     @FXML
     private Button startButton;
 
@@ -60,8 +72,11 @@ public class LauncherController implements Initializable {
     }
 
     /**
-     * Reage ao clique em "START AETHER" e avança para o ecrã de perfil,
-     * mantendo a moldura Glassmorphism da janela atual.
+     * Reage ao clique em "START AETHER".
+     * <p>
+     * Se o onboarding já estiver concluído, navega para o dashboard. Caso
+     * contrário, inicia o setup no passo 1 (perfil).
+     * </p>
      *
      * @param event o evento de ação gerado pelo botão
      */
@@ -71,7 +86,16 @@ public class LauncherController implements Initializable {
             startButton.setDisable(true);
         }
 
-        boolean navigated = Navigator.navigate(rootPane, PROFILE_VIEW);
+        boolean onboardingDone = UserSession.getInstance()
+                .getAppSettings()
+                .isOnboardingCompleted();
+
+        String target = onboardingDone ? DASHBOARD_VIEW : PROFILE_VIEW;
+
+        LOGGER.info(() -> "Start clicado. Onboarding concluído=" + onboardingDone
+                + " → a navegar para " + target);
+
+        boolean navigated = Navigator.navigate(rootPane, target);
 
         if (!navigated && startButton != null) {
             startButton.setDisable(false);

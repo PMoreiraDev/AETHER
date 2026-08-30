@@ -28,8 +28,15 @@ import util.OllamaService;
 import util.StyleUtils;
 import util.SystemInfo;
 /**
- * Controlador do passo 2 do onboarding — configuração do Ollama
+ * Controlador do passo 2 do setup — configuração do Ollama
  * ({@code ollama_setup.fxml}).
+ * <p>
+ * Este é o último passo do setup de 2 passos:
+ * </p>
+ * <ol>
+ *   <li>Perfil do utilizador ({@code profile.fxml})</li>
+ *   <li>Configuração do Ollama ({@code ollama_setup.fxml}) — este controlador</li>
+ * </ol>
  * <p>
  * Deteta o hardware disponível, recomenda modelos compatíveis, instala o motor
  * local do Ollama e gere a transferência e remoção de modelos. Todas as
@@ -38,7 +45,7 @@ import util.SystemInfo;
  * </p>
  *
  * @author Paulo Moreira
- * @version 1.2
+ * @version 1.3
  */
 public class OllamaSetUpController {
 
@@ -77,16 +84,13 @@ public class OllamaSetUpController {
     private static final String PROFILE_VIEW = "/FXML/profile.fxml";
 
     /**
-     * Caminho do ecrã do passo 3, ainda não implementado.
+     * Caminho do ecrã de dashboard, apresentado após conclusão do onboarding.
      * <p>
-     * Quando o ficheiro {@code /FXML/workspace_setup.fxml} for criado, basta
-     * atribuir esse caminho a esta constante: {@link #handleNext()} passa
-     * automaticamente a navegar para o novo ecrã, sem mais alterações. Enquanto
-     * o valor for {@code null}, o botão "Next" mantém o mesmo aspeto do passo 1,
-     * mas informa o utilizador de que o passo seguinte ainda está por chegar.
+     * Quando o utilizador conclui o passo 2 (instalação do Ollama e seleção do
+     * modelo), o botão "Next" navega para o dashboard principal do AETHER.
      * </p>
      */
-    private static final String NEXT_STEP_VIEW = null;
+    private static final String NEXT_STEP_VIEW = "/FXML/dashboard.fxml";
 
     /** Painel de raiz do ecrã, usado como origem da navegação. */
     @FXML
@@ -194,18 +198,14 @@ public class OllamaSetUpController {
     }
 
     /**
-     * Prepara o botão "Next" em função da existência do ecrã do passo 3.
+     * Prepares the "Next" button for the final onboarding step.
      * <p>
-     * O botão mantém sempre o aspeto que tem no passo 1, para que os dois ecrãs
-     * pareçam o mesmo fluxo. Enquanto o passo 3 não existir, recebe apenas uma
-     * dica a avisar que está a caminho; a navegação é tratada em
-     * {@link #handleNext()}.
+     * The dashboard screen is now implemented, so the button navigates directly
+     * to the main AETHER dashboard after saving the selected model.
      * </p>
      */
     private void prepareNextStepButton() {
-        if (NEXT_STEP_VIEW == null) {
-            nextStepButton.setTooltip(new Tooltip("The next step is coming soon."));
-        }
+        nextStepButton.setTooltip(new Tooltip("Open the AETHER dashboard"));
     }
 
     /**
@@ -221,11 +221,8 @@ public class OllamaSetUpController {
     }
 
     /**
-     * Saves the selected Ollama model and advances to the next setup step.
-     * <p>
-     * The Step 3 screen is not implemented yet, so the selected model is saved
-     * before showing the temporary "coming soon" message.
-     * </p>
+     * Saves the selected Ollama model, marks onboarding as complete, and opens
+     * the AETHER dashboard.
      */
     @FXML
     private void handleNext() {
@@ -242,6 +239,7 @@ public class OllamaSetUpController {
         UserSession session = UserSession.getInstance();
 
         session.getAppSettings().setActiveModelId(selectedModel);
+        session.getAppSettings().setOnboardingCompleted(true);
 
         if (!session.saveAppSettings()) {
             setStatus(
@@ -251,28 +249,9 @@ public class OllamaSetUpController {
             return;
         }
 
-        LOGGER.info(() -> "Selected Ollama model saved: " + selectedModel);
-
-        if (NEXT_STEP_VIEW == null) {
-            showComingSoonNotice();
-            return;
-        }
+        LOGGER.info(() -> "Onboarding complete. Model: " + selectedModel);
 
         Navigator.navigate(rootPane, NEXT_STEP_VIEW);
-    }
-
-    /**
-     * Apresenta um aviso de que o passo seguinte ainda não está disponível,
-     * usando o mesmo estilo dos restantes diálogos da aplicação.
-     */
-    private void showComingSoonNotice() {
-        Alert notice = new Alert(Alert.AlertType.INFORMATION);
-        notice.setTitle("AETHER");
-        notice.setHeaderText("Step 3 is coming soon");
-        notice.setContentText("Your setup is saved. The next step is still being built.");
-        StyleUtils.applyTo(notice.getDialogPane());
-        notice.getDialogPane().getStyleClass().add("custom-dialog-pane");
-        notice.showAndWait();
     }
 
     /**

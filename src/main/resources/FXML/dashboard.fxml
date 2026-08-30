@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    dashboard.fxml
+    ==============
+    Shell base do AETHER — persiste após o onboarding.
+
+    Arquitetura em camadas:
+      - Fundo: mesma imagem de fundo do onboarding
+      - BorderPane shell:
+          top    → Header (logo, add note, search, notifications)
+          left   → Sidebar (perfil + navegação)
+          center → StackPane com fx:id="contentArea" (vista atual)
+          right  → StackPane com fx:id="rightArea" (painel direito opcional)
+
+    O DashboardController carrega vistas (dashboard_view, aether_ai, calendar, etc.)
+    dentro do contentArea, permitindo que a sidebar e o header persistam.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="controller.DashboardController"
+           styleClass="dashboard-root">
+
+    <!-- Fundo: mesma imagem do onboarding -->
+    <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true">
+        <image>
+            <Image url="@../images/background.jpg"/>
+        </image>
+    </ImageView>
+
+    <!-- Shell principal -->
+    <BorderPane styleClass="dash-shell">
+
+        <!-- ============================================================= -->
+        <!-- HEADER                                                       -->
+        <!-- ============================================================= -->
+        <top>
+            <HBox alignment="CENTER_LEFT" spacing="16" styleClass="dash-header">
+                <padding>
+                    <Insets top="14" right="20" bottom="14" left="20"/>
+                </padding>
+                <children>
+                    <ImageView fitWidth="26" preserveRatio="true" smooth="true">
+                        <image>
+                            <Image url="@../images/aether_logo_mark.png"/>
+                        </image>
+                    </ImageView>
+                    <Label text="AETHER" styleClass="dash-brand-text"/>
+
+                    <Region HBox.hgrow="ALWAYS"/>
+
+                    <Button text="+ Add note" styleClass="dash-add-note-btn" onAction="#handleAddNote"/>
+
+                    <Button styleClass="dash-icon-btn" onAction="#handleSearch">
+                        <graphic>
+                            <Label text="🔍" styleClass="dash-icon-emoji"/>
+                        </graphic>
+                    </Button>
+
+                    <Button styleClass="dash-icon-btn" onAction="#handleNotifications">
+                        <graphic>
+                            <Label text="🔔" styleClass="dash-icon-emoji"/>
+                        </graphic>
+                    </Button>
+                </children>
+            </HBox>
+        </top>
+
+        <!-- ============================================================= -->
+        <!-- LEFT SIDEBAR                                                 -->
+        <!-- ============================================================= -->
+        <left>
+            <VBox spacing="0" styleClass="dash-sidebar-left" minWidth="230" maxWidth="250">
+                <padding>
+                    <Insets top="16" right="12" bottom="16" left="12"/>
+                </padding>
+                <children>
+
+                    <!-- User Profile Card — formatação igual à imagem de referência -->
+                    <VBox spacing="12" styleClass="dash-profile-card" alignment="CENTER">
+                        <padding>
+                            <Insets top="18" right="16" bottom="18" left="16"/>
+                        </padding>
+                        <children>
+
+                            <!-- Avatar com halo brilhante -->
+                            <StackPane alignment="CENTER" styleClass="dash-avatar-wrapper">
+                                <children>
+                                    <Circle radius="34" styleClass="dash-avatar-glow"/>
+                                    <StackPane>
+                                        <children>
+                                            <Circle radius="28" styleClass="dash-avatar-circle"/>
+                                            <Label fx:id="userInitialsLabel" text="AU" styleClass="dash-avatar-initials"/>
+                                            <!-- Ponto verde de status no canto inferior direito -->
+                                            <Circle radius="5" styleClass="dash-avatar-status-dot"
+                                                    translateX="18" translateY="18"/>
+                                        </children>
+                                    </StackPane>
+                                </children>
+                            </StackPane>
+
+                            <!-- Nome -->
+                            <Label fx:id="userNameLabel" text="AETHER User" styleClass="dash-user-name"/>
+
+                            <!-- Badges (ocupações reais do utilizador) -->
+                            <HBox fx:id="userBadgesBox" spacing="6" alignment="CENTER"/>
+
+                            <!-- Linha: AETHER has read your context -->
+                            <HBox spacing="6" alignment="CENTER">
+                                <children>
+                                    <Circle radius="3" styleClass="dash-aether-dot"/>
+                                    <Label text="AETHER has read your context" styleClass="dash-aether-notice"/>
+                                </children>
+                            </HBox>
+                        </children>
+                    </VBox>
+
+                    <!-- Navigation -->
+                    <VBox spacing="2" styleClass="dash-nav-section">
+                        <padding>
+                            <Insets top="16" left="2" right="2"/>
+                        </padding>
+                        <children>
+                            <Button fx:id="navDashboard" text="Dashboard" styleClass="dash-nav-item, dash-nav-item-active" onAction="#handleNavDashboard" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navAetherAI" text="AETHER AI" styleClass="dash-nav-item" onAction="#handleNavAetherAI" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navCalendar" text="Calendar" styleClass="dash-nav-item" onAction="#handleNavCalendar" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navPeople" text="People" styleClass="dash-nav-item" onAction="#handleNavPeople" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navEvents" text="Events" styleClass="dash-nav-item" onAction="#handleNavEvents" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navTasks" text="Tasks" styleClass="dash-nav-item" onAction="#handleNavTasks" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navNotes" text="Notes" styleClass="dash-nav-item" onAction="#handleNavNotes" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navSettings" text="Settings" styleClass="dash-nav-item" onAction="#handleNavSettings" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                        </children>
+                    </VBox>
+
+                    <Region VBox.vgrow="ALWAYS"/>
+
+                    <!-- Model indicator -->
+                    <HBox spacing="8" alignment="CENTER_LEFT" styleClass="dash-model-bar">
+                        <padding>
+                            <Insets top="10" left="14" right="14" bottom="10"/>
+                        </padding>
+                        <children>
+                            <Circle fx:id="modelStatusDot" radius="4" styleClass="indicador-pendente"/>
+                            <Label fx:id="modelLabel" text="No model" styleClass="dash-model-label"/>
+                        </children>
+                    </HBox>
+                </children>
+            </VBox>
+        </left>
+
+        <!-- ============================================================= -->
+        <!-- CENTER: swappable content area                               -->
+        <!-- ============================================================= -->
+        <center>
+            <StackPane fx:id="contentArea" styleClass="dash-content-area"/>
+        </center>
+
+        <!-- ============================================================= -->
+        <!-- RIGHT: optional right panel (loaded per-view)                -->
+        <!-- ============================================================= -->
+        <right>
+            <StackPane fx:id="rightArea" styleClass="dash-right-area"/>
+        </right>
+
+    </BorderPane>
+</StackPane>

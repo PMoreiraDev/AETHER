@@ -17,12 +17,13 @@ import util.WindowUtils;
 /**
  * Ponto de entrada da aplicação AETHER.
  * <p>
- * Carrega o ecrã de arranque, envolve-o na moldura Glassmorphism e configura as
- * dimensões e o ícone da janela principal.
+ * O arranque mostra sempre o ecrã Start. A decisão entre dashboard e setup
+ * é tomada quando o utilizador clica em Start — ver
+ * {@link controller.LauncherController#handleStartAether(javafx.event.ActionEvent)}.
  * </p>
  *
  * @author Paulo Moreira
- * @version 1.0
+ * @version 1.1
  */
 public class LauncherApp extends Application {
 
@@ -58,8 +59,11 @@ public class LauncherApp extends Application {
     private static final double MIN_HEIGHT = 600;
 
     /**
-     * Inicializa a janela principal: carrega o FXML do launcher, aplica a
-     * moldura Glassmorphism, define o ícone e dimensiona a janela.
+     * Inicializa a janela principal mostrando sempre o ecrã de arranque.
+     * <p>
+     * A decisão entre ir para o dashboard (onboarding concluído) ou para o
+     * setup (onboarding por concluir) é tomada no botão Start, não aqui.
+     * </p>
      *
      * @param primaryStage o palco principal fornecido pelo JavaFX
      */
@@ -67,8 +71,9 @@ public class LauncherApp extends Application {
     public void start(Stage primaryStage) {
         try {
             handleDevelopmentReset();
-            UserSession.getInstance();
+
             Parent root = loadLauncherView();
+
             Scene scene = WindowUtils.makeGlassWindow(primaryStage, root, WINDOW_TITLE);
 
             applyIcon(primaryStage);
