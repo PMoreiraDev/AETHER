@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    aether_ai.fxml
+    ==============
+    Vista do chat AETHER AI — carregada no contentArea do shell.
+
+    Layout:
+      - BorderPane:
+          top    → Cabeçalho com logo, título, modelo e estado
+          center → ScrollPane com VBox de mensagens (bubbles)
+          bottom → Input com TextField + botão de envio
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="controller.AetherAIController"
+            styleClass="ai-view-root">
+
+    <!-- ============================================================= -->
+    <!-- HEADER DO CHAT                                                -->
+    <!-- ============================================================= -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="ai-chat-header">
+            <padding>
+                <Insets top="16" right="24" bottom="16" left="24"/>
+            </padding>
+            <children>
+                <StackPane>
+                    <children>
+                        <Circle radius="16" styleClass="ai-logo-glow"/>
+                        <Circle radius="13" styleClass="ai-logo-circle"/>
+                        <Label text="✦" styleClass="ai-logo-icon"/>
+                    </children>
+                </StackPane>
+                <VBox spacing="2">
+                    <children>
+                        <Label text="AETHER AI" styleClass="ai-chat-title"/>
+                        <Label fx:id="modelLabel" text="" styleClass="ai-chat-subtitle"/>
+                    </children>
+                </VBox>
+
+                <Region HBox.hgrow="ALWAYS"/>
+
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <children>
+                        <Circle fx:id="statusDot" radius="5" styleClass="indicador-sucesso"/>
+                        <Label fx:id="statusLabel" text="Ready" styleClass="ai-status-label"/>
+                    </children>
+                </HBox>
+            </children>
+        </HBox>
+    </top>
+
+    <!-- ============================================================= -->
+    <!-- ÁREA DE CONVERSA — mensagens dinâmicas                         -->
+    <!-- ============================================================= -->
+    <center>
+        <ScrollPane fx:id="chatScroll" fitToWidth="true" fitToHeight="false"
+                    hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" styleClass="ai-chat-scroll">
+            <content>
+                <VBox fx:id="messagesContainer" spacing="12" styleClass="ai-messages-container">
+                    <padding>
+                        <Insets top="24" right="32" bottom="24" left="32"/>
+                    </padding>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+
+    <!-- ============================================================= -->
+    <!-- INPUT — campo de mensagem + botão de envio                    -->
+    <!-- ============================================================= -->
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="10" styleClass="ai-input-bar">
+            <padding>
+                <Insets top="12" right="24" bottom="12" left="24"/>
+            </padding>
+            <children>
+                <TextField fx:id="inputField" promptText="Message AETHER..."
+                           styleClass="ai-input-field" HBox.hgrow="ALWAYS"
+                           onAction="#handleSend"/>
+                <Button fx:id="sendButton" text="Send" styleClass="ai-send-btn" onAction="#handleSend"/>
+            </children>
+        </HBox>
+    </bottom>
+
+</BorderPane>

@@ -222,3 +222,18 @@ Copyright © 2026 PMoreiraDev.
 All rights reserved.
 
 See the `LICENSE` file for the complete license terms.
+## Development
+
+Run the application normally:
+
+```bash
+mvn javafx:run
+```
+
+To start with a clean local AETHER database (development/testing only):
+
+```bash
+mvn javafx:run -Daether.dev.reset=true
+```
+
+The reset flag deletes the local SQLite database before the application starts, allowing the onboarding flow to be tested from a clean state.

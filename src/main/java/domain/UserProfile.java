@@ -1,15 +1,16 @@
 package domain;
 
+import domain.Occupation;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Representa o perfil de utilizador recolhido durante o onboarding do AETHER.
+ * Representa o perfil pessoal do utilizador do AETHER.
  * <p>
- * Armazena dados pessoais como nome, data de nascimento, ocupações e uma
- * descrição livre. É usada pelo {@code UserSession} para manter os dados em
- * memória enquanto a aplicação está em execução.
+ * Contém os dados pessoais recolhidos durante o onboarding e posteriormente
+ * utilizados pela aplicação. Este é o modelo canónico do perfil do utilizador.
  * </p>
  *
  * @author Paulo Moreira
@@ -18,31 +19,42 @@ import java.util.List;
 public class UserProfile {
 
     /**
-     * Cria um perfil vazio, com todos os campos de texto inicializados a vazio.
+     * Nome completo do utilizador; nunca {@code null}.
      */
-    public UserProfile() {
-        // Construtor por omissão explícito, documentado para o Javadoc.
-    }
-
-    /** Nome completo do utilizador; nunca {@code null}. */
     private String fullName = "";
 
-    /** Nome pelo qual o utilizador prefere ser tratado; nunca {@code null}. */
+    /**
+     * Nome pelo qual o utilizador prefere ser tratado; nunca {@code null}.
+     */
     private String preferredName = "";
 
-    /** Data de nascimento; {@code null} quando não indicada. */
+    /**
+     * Data de nascimento; {@code null} quando não indicada.
+     */
     private LocalDate birthDate = null;
 
-    /** Ocupações selecionadas ou escritas pelo utilizador; nunca {@code null}. */
+    /**
+     * Ocupações do utilizador.
+     * Nunca {@code null}.
+     */
     private List<String> occupations = new ArrayList<>();
 
-    /** Descrição pessoal livre; nunca {@code null}. */
-    private String aboutYou = "";
+    /**
+     * Descrição pessoal livre do utilizador; nunca {@code null}.
+     */
+    private String about = "";
+
+    /**
+     * Cria um perfil vazio.
+     */
+    public UserProfile() {
+        // Construtor por omissão explícito.
+    }
 
     /**
      * Devolve o nome completo do utilizador.
      *
-     * @return o nome completo, ou string vazia se não definido
+     * @return o nome completo
      */
     public String getFullName() {
         return fullName;
@@ -51,16 +63,16 @@ public class UserProfile {
     /**
      * Define o nome completo do utilizador.
      *
-     * @param fullName o nome completo a armazenar
+     * @param fullName o nome completo
      */
     public void setFullName(String fullName) {
-        this.fullName = fullName;
+        this.fullName = fullName != null ? fullName : "";
     }
 
     /**
-     * Devolve o nome preferido (como o utilizador gosta de ser chamado).
+     * Devolve o nome preferido do utilizador.
      *
-     * @return o nome preferido, ou string vazia se não definido
+     * @return o nome preferido
      */
     public String getPreferredName() {
         return preferredName;
@@ -69,108 +81,154 @@ public class UserProfile {
     /**
      * Define o nome preferido do utilizador.
      *
-     * @param preferredName o nome preferido a armazenar
+     * @param preferredName o nome preferido
      */
     public void setPreferredName(String preferredName) {
-        this.preferredName = preferredName;
+        this.preferredName = preferredName != null ? preferredName : "";
     }
 
     /**
-     * Devolve a data de nascimento do utilizador.
+     * Devolve a data de nascimento.
      *
-     * @return a data de nascimento, ou {@code null} se não definida
+     * @return a data de nascimento ou {@code null}
      */
     public LocalDate getBirthDate() {
         return birthDate;
     }
 
     /**
-     * Define a data de nascimento do utilizador.
+     * Define a data de nascimento.
      *
-     * @param birthDate a data de nascimento, ou {@code null} para limpar
+     * @param birthDate a data de nascimento
      */
     public void setBirthDate(LocalDate birthDate) {
         this.birthDate = birthDate;
     }
 
     /**
-     * Devolve a lista de ocupações do utilizador.
+     * Devolve as ocupações do utilizador.
      *
-     * @return a lista de ocupações (nunca {@code null})
+     * @return lista de ocupações, nunca {@code null}
      */
     public List<String> getOccupations() {
         return occupations;
     }
 
     /**
-     * Devolve a categoria predefinida correspondente à ocupação principal.
+     * Substitui as ocupações do utilizador.
+     *
+     * @param occupations nova lista de ocupações
+     */
+    public void setOccupations(List<String> occupations) {
+        this.occupations = occupations != null
+                ? occupations
+                : new ArrayList<>();
+    }
+
+    /**
+     * Devolve a ocupação principal.
      * <p>
-     * Ocupações personalizadas, que não coincidem com nenhuma categoria
-     * conhecida, são classificadas como {@link Occupation#OTHER}.
+     * A ocupação principal corresponde ao primeiro elemento da lista.
      * </p>
      *
-     * @return a categoria da ocupação principal, ou {@link Occupation#OTHER} se não existir nenhuma
+     * @return a ocupação principal ou string vazia
+     */
+    public String getOccupation() {
+        return occupations.isEmpty() ? "" : occupations.get(0);
+    }
+
+    /**
+     * Define a ocupação principal.
+     * <p>
+     * Este método limpa as ocupações existentes e coloca a ocupação indicada
+     * como primeira ocupação.
+     * </p>
+     *
+     * @param occupation ocupação principal
+     */
+    public void setOccupation(String occupation) {
+        occupations.clear();
+
+        if (occupation != null && !occupation.isBlank()) {
+            occupations.add(occupation);
+        }
+    }
+
+    /**
+     * Devolve a categoria da ocupação principal.
+     *
+     * @return categoria da ocupação ou {@link Occupation#OTHER}
      */
     public Occupation getPrimaryOccupationCategory() {
         if (occupations.isEmpty()) {
             return Occupation.OTHER;
         }
+
         return Occupation.fromDisplayName(occupations.get(0));
     }
 
     /**
-     * Substitui a lista de ocupações do utilizador.
+     * Devolve a descrição pessoal do utilizador.
      *
-     * @param occupations a nova lista de ocupações; se {@code null}, é substituída por uma lista vazia
+     * @return descrição pessoal
      */
-    public void setOccupations(List<String> occupations) {
-        this.occupations = occupations != null ? occupations : new ArrayList<>();
-    }
-
-    /**
-     * Devolve a descrição pessoal ("About You") do utilizador.
-     *
-     * @return a descrição, ou string vazia se não definida
-     */
-    public String getAboutYou() {
-        return aboutYou;
+    public String getAbout() {
+        return about;
     }
 
     /**
      * Define a descrição pessoal do utilizador.
      *
-     * @param aboutYou a descrição a armazenar
+     * @param about descrição pessoal
      */
-    public void setAboutYou(String aboutYou) {
-        this.aboutYou = aboutYou;
+    public void setAbout(String about) {
+        this.about = about != null ? about : "";
     }
 
     /**
-     * Verifica se o perfil está completamente vazio (sem nenhum dado preenchido).
+     * Alias para {@link #getAbout()}.
      *
-     * @return {@code true} se todos os campos estiverem vazios ou nulos
+     * @return descrição pessoal
+     */
+    public String getAboutYou() {
+        return about;
+    }
+
+    /**
+     * Alias para {@link #setAbout(String)}.
+     *
+     * @param aboutYou descrição pessoal
+     */
+    public void setAboutYou(String aboutYou) {
+        this.about = aboutYou != null ? aboutYou : "";
+    }
+
+    /**
+     * Verifica se o perfil está completamente vazio.
+     *
+     * @return {@code true} se nenhum dado tiver sido preenchido
      */
     public boolean isEmpty() {
         return (fullName == null || fullName.isBlank()) &&
                 (preferredName == null || preferredName.isBlank()) &&
                 birthDate == null &&
                 occupations.isEmpty() &&
-                (aboutYou == null || aboutYou.isBlank());
+                (about == null || about.isBlank());
     }
 
     /**
-     * Devolve uma representação textual do perfil, útil para registo e depuração.
+     * Devolve uma representação textual do perfil.
      *
-     * @return os campos do perfil formatados numa única linha
+     * @return perfil formatado
      */
     @Override
     public String toString() {
-        return "UserProfile{" +
+        return "Profile{" +
                 "fullName='" + fullName + '\'' +
                 ", preferredName='" + preferredName + '\'' +
                 ", birthDate=" + birthDate +
                 ", occupations=" + occupations +
-                ", aboutYou='" + aboutYou + '\'' +
+                ", about='" + about + '\'' +
                 '}';
     }
 }

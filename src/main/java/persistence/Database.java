@@ -74,24 +74,42 @@ public final class Database {
     }
 
     /**
-     * Deletes the local database.
+     * Resets the development onboarding state while preserving user data.
      * <p>
-     * Intended for development and testing only.
+     * Intended for development and testing only. The saved profile remains
+     * available so the setup can be repeated with the existing user data.
      * </p>
      */
-    public static void reset() {
-        Path databasePath = getDatabasePath();
+    public static void resetForDevelopment() {
+        // Development reset intentionally keeps the user's profile data.
+        // It only resets the onboarding state so the setup can be repeated.
+        // This allows developers to test the complete setup flow and still
+        // arrive at the dashboard with the profile entered previously.
+        String createSettingsTable = """
+                CREATE TABLE IF NOT EXISTS app_settings (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    schema_version INTEGER NOT NULL DEFAULT 1,
+                    active_model_id TEXT NOT NULL DEFAULT '',
+                    onboarding_completed INTEGER NOT NULL DEFAULT 0
+                )
+                """;
 
-        try {
-            Files.deleteIfExists(databasePath);
-            Files.deleteIfExists(
-                    Path.of(databasePath + "-shm")
-            );
-            Files.deleteIfExists(
-                    Path.of(databasePath + "-wal")
-            );
-        } catch (IOException e) {
-            throw new RuntimeException("Could not reset AETHER database.", e);
+        String resetSettings = """
+                INSERT INTO app_settings
+                    (id, schema_version, active_model_id, onboarding_completed)
+                VALUES (1, 1, '', 0)
+                ON CONFLICT(id) DO UPDATE SET
+                    active_model_id = excluded.active_model_id,
+                    onboarding_completed = excluded.onboarding_completed
+                """;
+
+        try (Connection connection = getConnection();
+             java.sql.PreparedStatement create = connection.prepareStatement(createSettingsTable);
+             java.sql.PreparedStatement reset = connection.prepareStatement(resetSettings)) {
+            create.executeUpdate();
+            reset.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Could not reset AETHER onboarding state.", e);
         }
     }
 }

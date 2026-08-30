@@ -13,8 +13,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 /**
  * Serviço de integração com o motor local do Ollama.
@@ -43,6 +46,18 @@ public final class OllamaService {
 
     /** Limiar de memória, em GB, acima do qual são sugeridos modelos médios. */
     private static final long MID_MEMORY_GB = 8;
+
+    /** Número de tentativas (a 500ms cada) a aguardar que o servidor arranque. */
+    private static final int SERVER_START_ATTEMPTS = 30;
+
+    /**
+     * Durante quanto tempo o Ollama mantém o modelo carregado em memória após
+     * a última utilização. Sem isto, o valor por omissão do Ollama (5 minutos)
+     * força a recarregar o modelo do disco a cada pausa mais longa na
+     * conversa — para modelos de 7B-14B isso pode demorar dezenas de segundos.
+     * Mantê-lo carregado durante a sessão elimina essa espera repetida.
+     */
+    private static final String KEEP_ALIVE = "30m";
 
     /**
      * Construtor privado: esta é uma classe utilitária e não deve ser instanciada.
@@ -108,6 +123,9 @@ public final class OllamaService {
             if (SystemInfo.isWindows()) {
                 return installOnWindows();
             }
+            if (SystemInfo.isMac()) {
+                return installOnMac();
+            }
             return installWithShellScript();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -117,6 +135,50 @@ public final class OllamaService {
             LOGGER.log(Level.SEVERE, "Falha ao instalar o Ollama.", e);
             return false;
         }
+    }
+
+    /**
+     * Instala o Ollama em macOS.
+     * <p>
+     * O script oficial de instalação ({@code install.sh}) é feito para Linux
+     * e recusa-se a instalar em macOS. Por isso, em macOS é usado primeiro o
+     * Homebrew, quando disponível — o método oficialmente suportado para
+     * instalar o Ollama por linha de comandos neste sistema. Se o Homebrew
+     * não estiver instalado ou a instalação por essa via falhar, tenta-se
+     * ainda assim o script genérico como última hipótese (inofensivo se
+     * falhar, já que apenas devolve {@code false}).
+     * </p>
+     *
+     * @return {@code true} se o executável ficar disponível após a instalação
+     * @throws IOException se a execução do comando falhar
+     * @throws InterruptedException se o fio atual for interrompido durante a espera
+     */
+    private static boolean installOnMac() throws IOException, InterruptedException {
+        if (isHomebrewAvailable()) {
+            boolean ok = run(LONG_TASK_TIMEOUT_MINUTES, TimeUnit.MINUTES,
+                    "sh", "-c", "brew install ollama");
+            if (ok && waitForExecutable()) {
+                return true;
+            }
+            LOGGER.warning("Instalação via Homebrew falhou; a tentar o script genérico.");
+        } else {
+            LOGGER.info("Homebrew não encontrado; a tentar o script de instalação genérico.");
+        }
+        return installWithShellScript();
+    }
+
+    /**
+     * Verifica se o Homebrew está disponível neste Mac.
+     *
+     * @return {@code true} se o executável do {@code brew} for encontrado
+     */
+    private static boolean isHomebrewAvailable() {
+        for (String path : List.of("/opt/homebrew/bin/brew", "/usr/local/bin/brew")) {
+            if (new File(path).canExecute()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -177,6 +239,63 @@ public final class OllamaService {
     }
 
     /**
+     * Explica a causa mais provável de uma falha do {@link #chat}, verificando
+     * pela ordem: executável instalado, servidor a responder, modelo
+     * transferido.
+     * <p>
+     * Chamado apenas quando {@link #chat} devolve {@code null}, para dar ao
+     * utilizador uma mensagem acionável em vez de um erro genérico. Cada
+     * verificação repete uma chamada já feita por {@link #chat}, pelo que deve
+     * ser invocado fora do fio da interface, tal como os restantes métodos
+     * desta classe.
+     * </p>
+     *
+     * @param modelId o identificador do modelo que se tentou usar
+     * @return uma mensagem em inglês explicando a causa provável da falha
+     */
+    public static String diagnose(String modelId) {
+        if (findOllamaExecutable() == null) {
+            return "Ollama isn't installed on this device — no executable was found in "
+                    + "the usual install locations.";
+        }
+        if (!ensureServerRunning()) {
+            return "The Ollama server couldn't be started. Try running 'ollama serve' "
+                    + "manually in a terminal and check for errors there.";
+        }
+        if (modelId != null && !modelId.isBlank() && !isModelDownloaded(modelId)) {
+            return "The model '" + modelId + "' isn't downloaded on this device. "
+                    + "Run 'ollama pull " + modelId + "' or redo the setup.";
+        }
+        return "The Ollama server is running and the model is installed, but the "
+                + "request still failed. Check that no firewall or VPN is blocking "
+                + "localhost:11434.";
+    }
+
+    /**
+     * Resolve o modelo a usar de facto: mantém o modelo preferido se este já
+     * estiver transferido, ou usa o primeiro modelo instalado como
+     * alternativa automática quando o preferido não existe no disco.
+     * <p>
+     * Evita que o utilizador tenha de ir ao Terminal só porque o modelo
+     * guardado nas definições da aplicação não corresponde ao que foi de
+     * facto transferido — por exemplo, se escolheu outro modelo depois do
+     * setup inicial, ou se removeu o modelo original entretanto.
+     * </p>
+     *
+     * @param preferredModelId o modelo configurado nas definições da aplicação
+     * @return o modelo preferido, um substituto já instalado, ou {@code null}
+     *         se não houver nenhum modelo transferido neste dispositivo
+     */
+    public static String resolveAvailableModel(String preferredModelId) {
+        if (preferredModelId != null && !preferredModelId.isBlank()
+                && isModelDownloaded(preferredModelId)) {
+            return preferredModelId;
+        }
+        List<String> installed = getInstalledModels();
+        return installed.isEmpty() ? null : installed.get(0);
+    }
+
+    /**
      * Verifica se um modelo específico já se encontra transferido localmente.
      *
      * @param modelId o identificador do modelo (ex.: {@code llama3.2:1b})
@@ -200,6 +319,88 @@ public final class OllamaService {
      */
     public static boolean downloadModel(String modelId) {
         return runOllamaCommand(LONG_TASK_TIMEOUT_MINUTES, TimeUnit.MINUTES, "pull", modelId);
+    }
+
+    /**
+     * Transfere um modelo, reportando o progresso real da transferência.
+     * <p>
+     * Ao contrário de {@link #downloadModel(String)} (que corre {@code ollama
+     * pull} como processo externo e só devolve um resultado no fim), este
+     * método usa diretamente a API de streaming do Ollama em
+     * {@code POST /api/pull}. O Ollama transfere o modelo por camadas e
+     * devolve uma linha JSON por cada atualização, cada uma com o total de
+     * bytes da camada atual e quantos já foram transferidos — é isso que
+     * permite mostrar uma barra de progresso real em vez de um indicador
+     * indeterminado.
+     * </p>
+     *
+     * @param modelId o identificador do modelo a transferir
+     * @param onProgress chamado com a fração transferida da camada atual (0.0
+     *                    a 1.0) sempre que o Ollama reportar progresso; pode
+     *                    ser {@code null}. Chamado a partir do fio que invocar
+     *                    este método — se for a interface, o chamador deve
+     *                    marshal para o fio da UI (ex.: {@code Task.updateProgress}
+     *                    dentro de {@code call()} já trata disso).
+     * @return {@code true} se a transferência terminar com sucesso
+     */
+    public static boolean downloadModel(String modelId, DoubleConsumer onProgress) {
+        if (modelId == null || modelId.isBlank()) {
+            return false;
+        }
+        if (!ensureServerRunning()) {
+            LOGGER.warning("Transferência ignorada: o servidor do Ollama não está disponível.");
+            return false;
+        }
+
+        try {
+            String body = "{\"model\":\"" + escapeJson(modelId) + "\",\"stream\":true}";
+
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(10))
+                    .build();
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/pull"))
+                    .timeout(java.time.Duration.ofMinutes(LONG_TASK_TIMEOUT_MINUTES))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            java.net.http.HttpResponse<Stream<String>> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofLines());
+
+            if (response.statusCode() != 200) {
+                LOGGER.warning(() -> "Ollama API (pull) devolveu HTTP " + response.statusCode());
+                return false;
+            }
+
+            boolean[] success = {false};
+            try (Stream<String> lines = response.body()) {
+                lines.forEach(line -> {
+                    if (line == null || line.isBlank()) {
+                        return;
+                    }
+                    if (line.contains("\"error\"")) {
+                        LOGGER.warning(() -> "Ollama devolveu um erro a transferir '" + modelId + "': " + line);
+                        return;
+                    }
+                    if ("success".equals(extractStringField(line, "status"))) {
+                        success[0] = true;
+                    }
+                    if (onProgress != null) {
+                        Long total = extractLongField(line, "total");
+                        Long completed = extractLongField(line, "completed");
+                        if (total != null && total > 0 && completed != null) {
+                            onProgress.accept(Math.min(1.0, (double) completed / (double) total));
+                        }
+                    }
+                });
+            }
+            return success[0] || isModelDownloaded(modelId);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Falha ao transferir o modelo '" + modelId + "'.", e);
+            return false;
+        }
     }
 
     /**
@@ -413,22 +614,9 @@ public final class OllamaService {
      */
     public static Map<String, String> getRecommendedModels() {
         Map<String, String> options = new LinkedHashMap<>();
-        long ramGb = SystemInfo.getTotalRamGb();
-
-        if (ramGb == SystemInfo.UNKNOWN_RAM) {
-            options.put("llama3.2:1b", "Llama 3.2 (1B) — safe default");
-            return options;
-        }
-
-        if (ramGb >= HIGH_MEMORY_GB) {
-            options.put("llama3.2:3b", "Llama 3.2 (3B) — fast and capable (recommended)");
-            options.put("mistral", "Mistral (7B) — strong at reasoning and code");
-        } else if (ramGb >= MID_MEMORY_GB) {
-            options.put("llama3.2:1b", "Llama 3.2 (1B) — very fast and lightweight (recommended)");
-            options.put("gemma:2b", "Gemma (2B) — light and efficient");
-        } else {
-            options.put("qwen:0.5b", "Qwen (0.5B) — ultra light, best fit for this machine");
-        }
+        options.put("qwen2.5:14b", "Qwen 2.5 (14B) — high capability local model");
+        options.put("llama3.2:3b", "Llama 3.2 (3B) — fast and lightweight");
+        options.put("mistral:7b", "Mistral (7B) — balanced general-purpose model");
         return options;
     }
 
@@ -462,6 +650,329 @@ public final class OllamaService {
             return process.exitValue() == 0;
         } finally {
             destroy(process);
+        }
+    }
+
+    /**
+     * Envia um prompt ao modelo local do Ollama e devolve a resposta.
+     * <p>
+     * Usa a API REST do Ollama em {@code http://localhost:11434/api/generate}.
+     * O método é bloqueante e deve ser chamado fora do fio da interface.
+     * </p>
+     *
+     * @param modelId o identificador do modelo (ex.: {@code llama3.2:1b})
+     * @param prompt  o texto enviado ao modelo
+     * @return a resposta do modelo, ou {@code null} se falhar
+     */
+    public static String chat(String modelId, String prompt) {
+        if (modelId == null || modelId.isBlank() || prompt == null || prompt.isBlank()) {
+            return null;
+        }
+
+        if (!ensureServerRunning()) {
+            LOGGER.warning("Não foi possível contactar o modelo: o servidor do Ollama não está disponível.");
+            return null;
+        }
+
+        try {
+            String body = "{"
+                    + "\"model\":\"" + escapeJson(modelId) + "\","
+                    + "\"prompt\":\"" + escapeJson(prompt) + "\","
+                    + "\"stream\":false"
+                    + "}";
+
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(10))
+                    .build();
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/generate"))
+                    .timeout(java.time.Duration.ofMinutes(5))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            java.net.http.HttpResponse<String> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200) {
+                LOGGER.warning(() -> "Ollama API devolveu HTTP " + response.statusCode());
+                return null;
+            }
+
+            return extractResponse(response.body());
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Falha ao comunicar com o Ollama.", e);
+            return null;
+        }
+    }
+
+    /**
+     * Extrai o campo {@code response} de um JSON devolvido pelo Ollama.
+     *
+     * @param json o JSON completo
+     * @return o texto da resposta, ou {@code null} se não for encontrado
+     */
+    private static String extractResponse(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        // Procura pelo campo "response":"..."
+        String key = "\"response\":";
+        int idx = json.indexOf(key);
+        if (idx < 0) {
+            return null;
+        }
+        int start = idx + key.length();
+        // O valor pode começar com aspas
+        if (start < json.length() && json.charAt(start) == '"') {
+            start++;
+            StringBuilder sb = new StringBuilder();
+            for (int i = start; i < json.length(); i++) {
+                char c = json.charAt(i);
+                if (c == '\\' && i + 1 < json.length()) {
+                    char next = json.charAt(i + 1);
+                    switch (next) {
+                        case 'n' -> sb.append('\n');
+                        case 't' -> sb.append('\t');
+                        case '"' -> sb.append('"');
+                        case '\\' -> sb.append('\\');
+                        default -> sb.append(next);
+                    }
+                    i++;
+                } else if (c == '"') {
+                    break;
+                } else {
+                    sb.append(c);
+                }
+            }
+            return sb.toString();
+        }
+        return null;
+    }
+
+    /**
+     * Extrai o valor em string de um campo simples {@code "chave":"valor"} de
+     * uma linha JSON, sem depender de nenhuma biblioteca de parsing.
+     *
+     * @param json a linha JSON a analisar
+     * @param key o nome do campo
+     * @return o valor do campo, ou {@code null} se não existir
+     */
+    private static String extractStringField(String json, String key) {
+        String marker = "\"" + key + "\":\"";
+        int idx = json.indexOf(marker);
+        if (idx < 0) {
+            return null;
+        }
+        int start = idx + marker.length();
+        int end = json.indexOf('"', start);
+        return end < 0 ? null : json.substring(start, end);
+    }
+
+    /**
+     * Extrai o valor numérico de um campo simples {@code "chave":123} de uma
+     * linha JSON, sem depender de nenhuma biblioteca de parsing.
+     *
+     * @param json a linha JSON a analisar
+     * @param key o nome do campo
+     * @return o valor do campo, ou {@code null} se não existir ou não for numérico
+     */
+    private static Long extractLongField(String json, String key) {
+        String marker = "\"" + key + "\":";
+        int idx = json.indexOf(marker);
+        if (idx < 0) {
+            return null;
+        }
+        int start = idx + marker.length();
+        int end = start;
+        while (end < json.length() && Character.isDigit(json.charAt(end))) {
+            end++;
+        }
+        if (end == start) {
+            return null;
+        }
+        try {
+            return Long.parseLong(json.substring(start, end));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Envia um prompt ao modelo local do Ollama em modo de streaming,
+     * entregando cada fragmento de texto assim que chega, em vez de esperar
+     * pela resposta completa.
+     * <p>
+     * É esta a variante que a vista de chat deve usar: com {@code stream:
+     * false} (usado em {@link #chat}), a interface fica às escuras — sem
+     * qualquer sinal de progresso — até o modelo terminar de gerar a resposta
+     * inteira, o que em modelos maiores (7B-14B) pode demorar dezenas de
+     * segundos. Em streaming, o primeiro fragmento chega em pouco tempo e o
+     * texto vai aparecendo à medida que é gerado, tal como no ChatGPT ou no
+     * `ollama run` na consola — a resposta não fica mais rápida a gerar-se,
+     * mas deixa de parecer bloqueada.
+     * </p>
+     * <p>
+     * Também define {@code keep_alive} para {@link #KEEP_ALIVE}, para que o
+     * Ollama mantenha o modelo carregado em memória entre mensagens em vez de
+     * o libertar ao fim de 5 minutos (valor por omissão) — evitando o atraso
+     * de o recarregar do disco a meio de uma conversa.
+     * </p>
+     *
+     * @param modelId o identificador do modelo (ex.: {@code llama3.2:1b})
+     * @param prompt o texto enviado ao modelo
+     * @param onToken chamado com cada fragmento de texto assim que chega;
+     *                chamado a partir do fio que invocar este método
+     * @return {@code true} se pelo menos um fragmento tiver sido recebido
+     */
+    public static boolean chatStream(String modelId, String prompt, Consumer<String> onToken) {
+        if (modelId == null || modelId.isBlank() || prompt == null || prompt.isBlank()) {
+            return false;
+        }
+        if (!ensureServerRunning()) {
+            LOGGER.warning("Não foi possível contactar o modelo: o servidor do Ollama não está disponível.");
+            return false;
+        }
+
+        try {
+            String body = "{"
+                    + "\"model\":\"" + escapeJson(modelId) + "\","
+                    + "\"prompt\":\"" + escapeJson(prompt) + "\","
+                    + "\"stream\":true,"
+                    + "\"keep_alive\":\"" + KEEP_ALIVE + "\""
+                    + "}";
+
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(10))
+                    .build();
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/generate"))
+                    .timeout(java.time.Duration.ofMinutes(5))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            java.net.http.HttpResponse<Stream<String>> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofLines());
+
+            if (response.statusCode() != 200) {
+                LOGGER.warning(() -> "Ollama API devolveu HTTP " + response.statusCode());
+                return false;
+            }
+
+            boolean[] receivedAny = {false};
+            try (Stream<String> lines = response.body()) {
+                lines.forEach(line -> {
+                    if (line == null || line.isBlank()) {
+                        return;
+                    }
+                    String chunk = extractResponse(line);
+                    if (chunk != null && !chunk.isEmpty()) {
+                        receivedAny[0] = true;
+                        onToken.accept(chunk);
+                    }
+                });
+            }
+            return receivedAny[0];
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Falha ao comunicar com o Ollama (streaming).", e);
+            return false;
+        }
+    }
+
+    /**
+     * Escapa aspas e barras para usar numa string JSON.
+     *
+     * @param text o texto a escapar
+     * @return o texto escapado
+     */
+    private static String escapeJson(String text) {
+        return text.replace("\\", "\\\\")
+                   .replace("\"", "\\\"")
+                   .replace("\n", "\\n")
+                   .replace("\r", "");
+    }
+
+    /**
+     * Garante que o servidor do Ollama está em execução, iniciando-o em
+     * segundo plano se necessário.
+     * <p>
+     * A instalação do Ollama não arranca automaticamente o servidor em todos
+     * os sistemas (por exemplo, quando não corre como serviço/menu bar app),
+     * pelo que o AETHER tem de o iniciar explicitamente com {@code ollama
+     * serve} antes de conversar com o modelo. O processo é lançado de forma
+     * independente (a sua saída é descartada) e o método aguarda até
+     * {@link #SERVER_START_ATTEMPTS} tentativas que o servidor responda.
+     * </p>
+     *
+     * @return {@code true} se o servidor já estiver, ou passar a ficar, acessível
+     */
+    public static boolean ensureServerRunning() {
+        if (isServerRunning()) {
+            return true;
+        }
+
+        String ollamaPath = findOllamaExecutable();
+        if (ollamaPath == null) {
+            LOGGER.warning("Não é possível iniciar o servidor: o Ollama não está instalado.");
+            return false;
+        }
+
+        try {
+            ProcessBuilder builder = new ProcessBuilder(ollamaPath, "serve");
+            builder.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+            builder.redirectError(ProcessBuilder.Redirect.DISCARD);
+            builder.start();
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Falha ao iniciar o servidor do Ollama.", e);
+            return false;
+        }
+
+        return waitForServerReady();
+    }
+
+    /**
+     * Aguarda repetidamente que o servidor do Ollama comece a responder.
+     *
+     * @return {@code true} se o servidor responder dentro do tempo previsto
+     */
+    private static boolean waitForServerReady() {
+        for (int attempt = 0; attempt < SERVER_START_ATTEMPTS; attempt++) {
+            if (isServerRunning()) {
+                return true;
+            }
+            try {
+                TimeUnit.MILLISECONDS.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return isServerRunning();
+    }
+
+    /**
+     * Verifica se o servidor do Ollama está acessível.
+     *
+     * @return {@code true} se o Ollama estiver a responder
+     */
+    public static boolean isServerRunning() {
+        try {
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(3))
+                    .build();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/tags"))
+                    .timeout(java.time.Duration.ofSeconds(3))
+                    .GET()
+                    .build();
+            java.net.http.HttpResponse<String> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 200;
+        } catch (Exception e) {
+            return false;
         }
     }
 

@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    dashboard_view.fxml
+    ===================
+    Vista do dashboard carregada dentro do contentArea do shell.
+
+    Layout:
+      - HBox com duas colunas:
+          esquerda  → contexto principal (Context Graph + cartões People/Events/Tasks)
+          direita  → calendário + agenda do dia
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<HBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controller.DashboardViewController"
+      spacing="16"
+      styleClass="dash-view-root">
+
+    <!-- ========================================================= -->
+    <!-- COLUNA ESQUERDA: Context Graph + Summary Cards             -->
+    <!-- ========================================================= -->
+    <VBox spacing="16" HBox.hgrow="ALWAYS" styleClass="dash-view-left">
+        <padding>
+            <Insets top="20" right="0" bottom="20" left="20"/>
+        </padding>
+        <children>
+
+            <!-- Context Graph -->
+            <VBox spacing="10" styleClass="dash-card, dash-graph-card" VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets top="16" right="16" bottom="16" left="16"/>
+                </padding>
+                <children>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <children>
+                            <Label text="Context Graph" styleClass="dash-card-title"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button text="ℹ" styleClass="dash-card-icon-btn"/>
+                            <Button text="⚙" styleClass="dash-card-icon-btn"/>
+                            <Button text="⛶" styleClass="dash-card-icon-btn"/>
+                        </children>
+                    </HBox>
+
+                    <VBox fx:id="contextGraphContainer" spacing="8" styleClass="dash-graph-canvas" alignment="CENTER" VBox.vgrow="ALWAYS">
+                        <padding>
+                            <Insets top="24" bottom="24" left="24" right="24"/>
+                        </padding>
+                        <children>
+                            <Label fx:id="graphPlaceholderLabel" text="Your context graph is empty" styleClass="dash-graph-placeholder-text"/>
+                            <Label text="Add people, events, tasks and notes to see connections here." styleClass="dash-graph-hint"/>
+                        </children>
+                    </VBox>
+                </children>
+            </VBox>
+
+            <!-- Summary cards row -->
+            <HBox spacing="14" styleClass="dash-summary-row">
+
+                <!-- People Card -->
+                <VBox spacing="10" styleClass="dash-card, dash-summary-card" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="14" right="14" bottom="14" left="14"/>
+                    </padding>
+                    <children>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="👤" styleClass="dash-card-icon-amber"/>
+                                <Label text="People" styleClass="dash-card-title-sm"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="peopleCountLabel" text="0" styleClass="dash-count-badge"/>
+                            </children>
+                        </HBox>
+                        <Separator styleClass="dash-separator"/>
+                        <VBox fx:id="peopleListContainer" spacing="6" VBox.vgrow="ALWAYS"/>
+                    </children>
+                </VBox>
+
+                <!-- Events Card -->
+                <VBox spacing="10" styleClass="dash-card, dash-summary-card" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="14" right="14" bottom="14" left="14"/>
+                    </padding>
+                    <children>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="📅" styleClass="dash-card-icon-purple"/>
+                                <Label text="Events" styleClass="dash-card-title-sm"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="eventsCountLabel" text="0" styleClass="dash-count-badge"/>
+                            </children>
+                        </HBox>
+                        <Separator styleClass="dash-separator"/>
+                        <VBox fx:id="eventsListContainer" spacing="6" VBox.vgrow="ALWAYS"/>
+                    </children>
+                </VBox>
+
+                <!-- Tasks Card -->
+                <VBox spacing="10" styleClass="dash-card, dash-summary-card" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="14" right="14" bottom="14" left="14"/>
+                    </padding>
+                    <children>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <children>
+                                <Label text="✓" styleClass="dash-card-icon-blue"/>
+                                <Label text="Tasks" styleClass="dash-card-title-sm"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label fx:id="tasksCountLabel" text="0" styleClass="dash-count-badge"/>
+                            </children>
+                        </HBox>
+                        <Separator styleClass="dash-separator"/>
+                        <VBox fx:id="tasksListContainer" spacing="6" VBox.vgrow="ALWAYS"/>
+                    </children>
+                </VBox>
+            </HBox>
+        </children>
+    </VBox>
+
+    <!-- ========================================================= -->
+    <!-- COLUNA DIREITA: Calendar + Today Schedule                   -->
+    <!-- ========================================================= -->
+    <VBox spacing="16" styleClass="dash-view-right" minWidth="230" maxWidth="250">
+        <padding>
+            <Insets top="20" right="20" bottom="20" left="0"/>
+        </padding>
+        <children>
+
+            <!-- Calendar -->
+            <VBox spacing="10" styleClass="dash-card, dash-calendar-card">
+                <padding>
+                    <Insets top="14" right="14" bottom="14" left="14"/>
+                </padding>
+                <children>
+                    <HBox spacing="8" alignment="CENTER">
+                        <children>
+                            <Button text="‹" styleClass="dash-cal-nav-btn" onAction="#handlePrevMonth"/>
+                            <Label fx:id="monthLabel" text="" styleClass="dash-cal-month"/>
+                            <Button text="›" styleClass="dash-cal-nav-btn" onAction="#handleNextMonth"/>
+                        </children>
+                    </HBox>
+
+                    <HBox spacing="0" alignment="CENTER">
+                        <children>
+                            <Label text="S" styleClass="dash-cal-dow" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER"/>
+                            <Label text="T" styleClass="dash-cal-dow" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER"/>
+                            <Label text="Q" styleClass="dash-cal-dow" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER"/>
+                            <Label text="Q" styleClass="dash-cal-dow" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER"/>
+                            <Label text="S" styleClass="dash-cal-dow" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER"/>
+                            <Label text="S" styleClass="dash-cal-dow" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER"/>
+                            <Label text="D" styleClass="dash-cal-dow" HBox.hgrow="ALWAYS" maxWidth="Infinity" alignment="CENTER"/>
+                        </children>
+                    </HBox>
+
+                    <VBox fx:id="calendarGrid" spacing="2" alignment="CENTER"/>
+                </children>
+            </VBox>
+
+            <!-- Today Schedule -->
+            <VBox spacing="8" styleClass="dash-card, dash-today-card" VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets top="14" right="14" bottom="14" left="14"/>
+                </padding>
+                <children>
+                    <HBox spacing="8" alignment="CENTER_LEFT">
+                        <children>
+                            <Label text="Today" styleClass="dash-card-title-sm"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="todayCountLabel" text="0" styleClass="dash-count-badge"/>
+                        </children>
+                    </HBox>
+                    <Separator styleClass="dash-separator"/>
+                    <VBox fx:id="todayScheduleContainer" spacing="8" VBox.vgrow="ALWAYS"/>
+                </children>
+            </VBox>
+        </children>
+    </VBox>
+
+</HBox>
