@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    profile_edit.fxml
+    ================
+    Modal de edição de perfil — carregado por ProfileViewController.handleEditProfile()
+    como um Stage modal transparent sobre o dashboard.
+
+    Estrutura:
+      - VBox root (.profile-modal)
+          - Header (.profile-modal-header)
+          - ScrollPane (.profile-modal-scroll)
+              - VBox content
+                  - HBox (duas colunas)
+                      - Coluna esquerda: Profile Photo card
+                      - Coluna direita: Personal Information fields
+                  - AI Information card
+          - Footer (.profile-modal-footer)
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controller.ProfileEditController"
+      spacing="0"
+      styleClass="profile-modal">
+
+    <!-- ========================================================= -->
+    <!-- HEADER                                                    -->
+    <!-- ========================================================= -->
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="profile-modal-header">
+        <padding>
+            <Insets top="20" right="24" bottom="16" left="24"/>
+        </padding>
+        <children>
+            <Label text="●" styleClass="profile-modal-header-icon"/>
+            <VBox spacing="2">
+                <Label text="Edit Profile" styleClass="profile-modal-title"/>
+                <Label text="Update your personal information and preferences" styleClass="profile-modal-subtitle"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="closeButton" text="✕" styleClass="profile-modal-close-btn" onAction="#handleClose"/>
+        </children>
+    </HBox>
+
+    <!-- ========================================================= -->
+    <!-- CONTENT (scrollable)                                       -->
+    <!-- ========================================================= -->
+    <ScrollPane styleClass="profile-modal-scroll" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
+        <content>
+            <VBox spacing="20" styleClass="profile-modal-content">
+                <padding>
+                    <Insets top="4" right="24" bottom="4" left="24"/>
+                </padding>
+
+                <!-- Two columns: Photo | Personal Info -->
+                <HBox spacing="20" alignment="TOP_CENTER">
+
+                    <!-- ============================================== -->
+                    <!-- COLUNA ESQUERDA — PROFILE PHOTO                 -->
+                    <!-- ============================================== -->
+                    <VBox spacing="14" styleClass="profile-photo-card" alignment="TOP_CENTER" HBox.hgrow="NEVER">
+                        <padding>
+                            <Insets top="18" right="18" bottom="18" left="18"/>
+                        </padding>
+                        <children>
+                            <Label text="Profile Photo" styleClass="profile-photo-card-title"/>
+                            <Label text="Your profile photo represents you in AETHER" styleClass="profile-photo-card-desc" wrapText="true"/>
+
+                            <!-- Avatar circular com botão de câmera -->
+                            <StackPane styleClass="profile-photo-avatar-wrapper">
+                                <Circle fx:id="avatarGlow" radius="65" styleClass="profile-photo-avatar-glow"/>
+                                <StackPane styleClass="profile-photo-avatar-inner">
+                                    <Circle fx:id="avatarCircle" radius="58" styleClass="profile-photo-avatar-circle"/>
+                                    <ImageView fx:id="avatarImageView" mouseTransparent="true"/>
+                                    <Label fx:id="avatarInitials" text="AU" styleClass="profile-photo-avatar-initials"/>
+                                </StackPane>
+                                <!-- Botão de câmera no canto inferior direito -->
+                                <Button fx:id="cameraButton" text="📷" styleClass="profile-photo-camera-btn" onAction="#handleChoosePhoto"/>
+                            </StackPane>
+
+                            <Button text="Change Photo" styleClass="profile-photo-change-btn" onAction="#handleChoosePhoto"/>
+                            <Button text="Remove Photo" styleClass="profile-photo-remove-btn" onAction="#handleRemovePhoto"/>
+
+                            <Label text="JPG, PNG or WEBP. Max size 5MB. Recommended: 400x400px"
+                                   styleClass="profile-photo-hint" wrapText="true"/>
+                        </children>
+                    </VBox>
+
+                    <!-- ============================================== -->
+                    <!-- COLUNA DIREITA — PERSONAL INFORMATION          -->
+                    <!-- ============================================== -->
+                    <VBox spacing="16" styleClass="profile-info-section" HBox.hgrow="ALWAYS">
+                        <padding>
+                            <Insets top="18" right="18" bottom="18" left="18"/>
+                        </padding>
+
+                        <!-- Row 1: Full Name | Preferred Name -->
+                        <HBox spacing="12">
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Full Name" styleClass="profile-field-label"/>
+                                <TextField fx:id="fullNameField" styleClass="profile-text-field" promptText="Full name"/>
+                            </VBox>
+                            <VBox spacing="6" HBox.hgrow="ALWAYS">
+                                <Label text="Preferred Name" styleClass="profile-field-label"/>
+                                <TextField fx:id="preferredNameField" styleClass="profile-text-field" promptText="What should AETHER call you?"/>
+                            </VBox>
+                        </HBox>
+
+                        <!-- Row 2: Birthday -->
+                        <VBox spacing="6">
+                            <Label text="Birthday" styleClass="profile-field-label"/>
+                            <TextField fx:id="birthdayField" styleClass="profile-text-field" promptText="D / M / YYYY"/>
+                        </VBox>
+
+                        <!-- Row 3: Occupation / Roles -->
+                        <VBox spacing="6">
+                            <Label text="Occupation / Roles" styleClass="profile-field-label"/>
+                            <TextField fx:id="occupationsField" styleClass="profile-text-field" promptText="e.g. Student, Developer"/>
+                        </VBox>
+
+                        <!-- Row 4: About You -->
+                        <VBox spacing="6">
+                            <Label text="About You" styleClass="profile-field-label"/>
+                            <TextArea fx:id="aboutField" styleClass="profile-text-area" promptText="Tell AETHER about yourself..." wrapText="true" prefRowCount="4"/>
+                        </VBox>
+                    </VBox>
+                </HBox>
+
+                <!-- ========================================================= -->
+                <!-- AI INFORMATION CARD                                       -->
+                <!-- ========================================================= -->
+                <VBox spacing="10" styleClass="ai-info-card">
+                    <padding>
+                        <Insets top="16" right="18" bottom="16" left="18"/>
+                    </padding>
+                    <children>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Label text="✦" styleClass="ai-info-icon"/>
+                            <Label text="About your information" styleClass="ai-info-title"/>
+                        </HBox>
+                        <Label text="This information helps AETHER personalize your experience and provide better assistance. You can update it anytime."
+                               styleClass="ai-info-text" wrapText="true"/>
+                    </children>
+                </VBox>
+            </VBox>
+        </content>
+    </ScrollPane>
+
+    <!-- ========================================================= -->
+    <!-- FOOTER                                                     -->
+    <!-- ========================================================= -->
+    <HBox spacing="12" alignment="CENTER_RIGHT" styleClass="profile-modal-footer">
+        <padding>
+            <Insets top="14" right="24" bottom="18" left="24"/>
+        </padding>
+        <children>
+            <Button text="Cancel" styleClass="profile-cancel-button" onAction="#handleCancel"/>
+            <Button text="✓ Save Changes" styleClass="profile-save-button" onAction="#handleSave"/>
+        </children>
+    </HBox>
+
+</VBox>

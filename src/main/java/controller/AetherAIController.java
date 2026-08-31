@@ -18,6 +18,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import session.UserSession;
+import util.ContextManager;
 import util.OllamaService;
 
 /**
@@ -353,7 +354,12 @@ public class AetherAIController implements Initializable {
         Task<Boolean> chatTask = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
-                boolean received = OllamaService.chatStream(modelId, message.trim(), token -> {
+                // O ContextManager constrói o prompt de sistema completo:
+                // system instructions + dynamic date/time + compact summary + relevant context.
+                // O contexto é selecionado com base na mensagem do utilizador,
+                // em vez de enviar indiscriminadamente toda a base de dados.
+                String systemContext = ContextManager.buildSystemPrompt(message.trim());
+                boolean received = OllamaService.chatStream(modelId, message.trim(), systemContext, token -> {
                     fullReply.append(token);
                     String snapshot = fullReply.toString();
                     Platform.runLater(() -> {

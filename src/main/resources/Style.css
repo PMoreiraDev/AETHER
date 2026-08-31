@@ -890,6 +890,16 @@
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 12, 0, 0, 2);
 }
 
+/* Cartão do utilizador é clicável — navega para a Profile View */
+.dash-profile-card-clickable {
+    -fx-cursor: hand;
+}
+.dash-profile-card-clickable:hover {
+    -fx-background-color: rgba(28, 36, 54, 0.65);
+    -fx-border-color: rgba(99, 102, 241, 0.35);
+    -fx-effect: dropshadow(gaussian, rgba(99, 102, 241, 0.18), 14, 0, 0, 2);
+}
+
 /* Wrapper do avatar — center alignment */
 .dash-avatar-wrapper {
     -fx-padding: 4 0 2 0;
@@ -1105,17 +1115,22 @@
 
 .dash-card-icon-amber {
     -fx-font-size: 15px;
-    -fx-text-fill: #fbbf24;
+    -fx-text-fill: #22d3ee;
 }
 
 .dash-card-icon-purple {
     -fx-font-size: 15px;
-    -fx-text-fill: #a78bfa;
+    -fx-text-fill: #818cf8;
 }
 
 .dash-card-icon-blue {
     -fx-font-size: 15px;
-    -fx-text-fill: #60a5fa;
+    -fx-text-fill: #6366f1;
+}
+
+.dash-card-icon-cyan {
+    -fx-font-size: 15px;
+    -fx-text-fill: #22d3ee;
 }
 
 .dash-count-badge {
@@ -1412,7 +1427,7 @@
 .settings-title { -fx-text-fill: #f8fafc; -fx-font-size: 26px; -fx-font-weight: bold; }
 .settings-subtitle { -fx-text-fill: #64748b; -fx-font-size: 13px; }
 .settings-content { -fx-padding: 4px 34px 34px 34px; }
-.settings-section-title { -fx-text-fill: #e2e8f0; -fx-font-size: 12px; -fx-font-weight: bold; -fx-letter-spacing: 1px; }
+.settings-section-title { -fx-text-fill: #e2e8f0; -fx-font-size: 12px; -fx-font-weight: bold; }
 .settings-section-label { -fx-text-fill: #64748b; -fx-font-size: 10px; -fx-font-weight: bold; }
 .settings-active-card, .settings-model-card { -fx-background-color: rgba(255,255,255,0.035); -fx-background-radius: 14px; -fx-border-color: rgba(255,255,255,0.08); -fx-border-radius: 14px; -fx-border-width: 1px; }
 .settings-active-card { -fx-padding: 18px; }
@@ -1430,3 +1445,806 @@
 .settings-secondary-btn { -fx-background-color: rgba(255,255,255,0.06); -fx-border-color: rgba(255,255,255,0.10); -fx-border-radius: 8px; -fx-text-fill: #cbd5e1; }
 .settings-secondary-btn:hover { -fx-background-color: rgba(255,255,255,0.11); }
 .settings-scroll, .settings-scroll .viewport, .settings-scroll .content { -fx-background-color: transparent; }
+
+/* --------------------------------------------------------------------- */
+/* 9. PROFILE VIEW                                                         */
+/* --------------------------------------------------------------------- */
+
+/* Root do profile view */
+.profile-view-root {
+    -fx-background-color: transparent;
+}
+
+/* ScrollPane that wraps the profile view */
+.profile-view-scroll,
+.profile-view-scroll > .viewport,
+.profile-view-scroll .scroll-pane,
+.profile-view-scroll .scroll-pane .viewport {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+}
+.profile-view-scroll .content {
+    -fx-background-color: transparent;
+}
+.profile-view-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+.profile-view-scroll > .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-background-radius: 6px;
+}
+
+.profile-view-left {
+    -fx-background-color: transparent;
+}
+
+.profile-view-right {
+    -fx-background-color: rgba(10, 15, 26, 0.35);
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 0 0 0 1px;
+}
+
+/* Profile Summary Card */
+.profile-summary-card {
+    -fx-min-height: 200;
+}
+
+/* Avatar */
+.profile-avatar-wrapper {
+    -fx-padding: 2 0 2 0;
+}
+
+.profile-avatar-glow {
+    -fx-fill: rgba(34, 211, 238, 0.12);
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.3), 24, 0.5, 0, 0);
+}
+
+.profile-avatar-circle {
+    -fx-fill: #1e293b;
+    -fx-stroke: #22d3ee;
+    -fx-stroke-width: 2px;
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.2), 12, 0, 0, 0);
+}
+
+.profile-avatar-initials {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #22d3ee;
+}
+
+.profile-avatar-status-dot {
+    -fx-fill: #22c55e;
+    -fx-stroke: rgba(5, 8, 17, 0.8);
+    -fx-stroke-width: 2px;
+    -fx-effect: dropshadow(gaussian, rgba(34, 197, 94, 0.6), 6, 0.5, 0, 0);
+}
+
+/* Name and bio */
+.profile-name {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.profile-roles {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-text-fill: #60a5fa;
+}
+
+.profile-bio {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-text-fill: #94a3b8;
+}
+
+/* Edit Profile button */
+.profile-edit-btn {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 999px;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-radius: 999px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-padding: 7 16;
+    -fx-cursor: hand;
+}
+.profile-edit-btn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-text-fill: #ffffff;
+}
+
+/* Skills row */
+.profile-skills-row {
+    -fx-padding: 4 0 4 0;
+}
+
+/* Stats bar */
+.profile-stats-bar {
+    -fx-background-color: rgba(5, 8, 17, 0.3);
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-border-color: rgba(255, 255, 255, 0.05);
+    -fx-border-width: 1px;
+    -fx-padding: 12 8;
+}
+
+.profile-stat-item {
+    -fx-alignment: center;
+}
+
+.profile-stat-value {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #22d3ee;
+}
+
+.profile-stat-label {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 10px;
+    -fx-text-fill: #64748b;
+}
+
+/* Section icons — use AETHER blue/cyan identity */
+.profile-section-icon {
+    -fx-font-size: 14px;
+    -fx-text-fill: #22d3ee;
+}
+
+/* View all link */
+.profile-view-all-link {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 11px;
+    -fx-text-fill: #60a5fa;
+    -fx-cursor: hand;
+}
+
+/* Empty hint */
+.profile-empty-hint {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-text-fill: #475569;
+}
+
+/* Activity card */
+.profile-activity-card {
+    -fx-min-height: 160;
+}
+
+/* Personal Information */
+.profile-info-card {
+    -fx-min-height: 180;
+}
+
+.profile-info-row {
+    -fx-padding: 4 0 4 0;
+}
+
+.profile-info-label {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 10px;
+    -fx-text-fill: #64748b;
+    -fx-font-weight: 600;
+}
+
+.profile-info-value {
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-text-fill: #e2e8f0;
+}
+
+/* Achievements */
+.profile-achievements-card {
+    -fx-min-height: 120;
+}
+
+.profile-achievements-row {
+    -fx-padding: 8 0;
+}
+
+/* Quick Actions */
+.profile-actions-card {
+    -fx-min-height: 140;
+}
+
+.profile-quick-action {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 8px;
+    -fx-text-fill: #94a3b8;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-padding: 8 10;
+    -fx-cursor: hand;
+    -fx-content-display: LEFT;
+}
+.profile-quick-action:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-text-fill: #e2e8f0;
+}
+
+/* ================================================================
+   9.5. AI CONTEXT SECTION
+   ================================================================ */
+
+/* [CORRIGIDO] Fundo sólido e opaco substituído por vidro translúcido,
+   igual às restantes .dash-card — antes esta classe (declarada depois de
+   .dash-card, logo com prioridade) tapava por completo o efeito
+   glassmorphism com um retângulo azul-escuro sólido. */
+.profile-ai-context-card {
+    -fx-background-color: rgba(18, 24, 38, 0.65);
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-border-color: rgba(99, 102, 241, 0.30);
+    -fx-border-width: 1px;
+}
+
+/* Suggested profile updates card */
+.profile-suggested-card {
+    -fx-background-color: rgba(18, 24, 38, 0.60);
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-border-color: rgba(251, 191, 36, 0.25);
+    -fx-border-width: 1px;
+    -fx-padding: 18px 20px 18px 20px;
+}
+.profile-suggested-hint {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 4px;
+    -fx-font-weight: normal;
+}
+.profile-suggested-text {
+    -fx-background-color: rgba(251, 191, 36, 0.06);
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: rgba(251, 191, 36, 0.15);
+    -fx-border-width: 1px;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 13px;
+    -fx-line-spacing: 4px;
+    -fx-padding: 10px 14px 10px 14px;
+}
+.profile-suggested-btn {
+    -fx-background-color: rgba(251, 191, 36, 0.15);
+    -fx-background-radius: 8px;
+    -fx-text-fill: #fbbf24;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+.profile-suggested-btn:hover {
+    -fx-background-color: rgba(251, 191, 36, 0.25);
+}
+
+.profile-ai-context-subtitle {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 13;
+    -fx-font-weight: bold;
+}
+
+.profile-ai-context-hint {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 12;
+}
+
+/* [CORRIGIDO] Esta caixa é aplicada em conjunto com ".area-texto"
+   (styleClass="area-texto, profile-ai-context-input" no FXML), que já
+   desenha o fundo em vidro correto no seu nó ".content". Como esta classe
+   está declarada depois de ".area-texto" no ficheiro, tinha prioridade e
+   pintava um retângulo sólido e opaco por cima — daí o aspeto
+   "desformatado" com duas caixas a competir. Agora só define o tamanho,
+   deixando o vidro a cargo de ".area-texto". O seletor ":focus" também
+   nunca existiu no CSS do JavaFX (é ":focused"), por isso nunca fazia
+   nada — removido; o foco já é tratado por ".area-texto:focused .content". */
+.profile-ai-context-input {
+    -fx-font-size: 14;
+    -fx-min-height: 140;
+}
+
+.profile-save-context-btn {
+    -fx-background-color: #6366f1;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-font-size: 13;
+    -fx-background-radius: 8;
+    -fx-padding: 8 16;
+    -fx-cursor: hand;
+}
+
+.profile-save-context-btn:hover {
+    -fx-background-color: #818cf8;
+}
+
+.profile-save-context-btn:pressed {
+    -fx-background-color: #4f46e5;
+}
+
+.profile-context-status {
+    -fx-font-size: 12;
+    -fx-font-weight: bold;
+}
+
+.profile-context-saved {
+    -fx-text-fill: #22c55e;
+}
+
+.profile-context-error {
+    -fx-text-fill: #fca5a5;
+}
+
+/* ================================================================
+   9.6. CONTEXT GRAPH — CENTRAL USER NODE
+   ================================================================ */
+
+.dash-graph-user-node {
+    -fx-alignment: center;
+    -fx-padding: 16 0 0 0;
+}
+
+/* Nó central do Context Graph (Central Context Note) — clicável */
+.dash-graph-user-node-clickable {
+    -fx-background-radius: 14px;
+    -fx-padding: 16 18 16 18;
+}
+.dash-graph-user-node-clickable:hover {
+    -fx-background-color: rgba(99, 102, 241, 0.08);
+    -fx-background-radius: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(99, 102, 241, 0.25), 16, 0, 0, 0);
+}
+
+.dash-graph-user-avatar {
+    -fx-padding: 0 0 6 0;
+}
+
+.dash-graph-user-circle {
+    -fx-fill: #6366f1;
+    -fx-stroke: #0c1525;
+    -fx-stroke-width: 3;
+}
+
+.dash-graph-user-initials {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 20;
+    -fx-font-weight: bold;
+}
+
+.dash-graph-user-name {
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 15;
+    -fx-font-weight: bold;
+}
+
+.dash-graph-context-preview {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 12;
+    -fx-text-alignment: center;
+}
+
+.dash-graph-empty-context {
+    -fx-text-fill: #475569;
+    -fx-font-size: 12;
+    -fx-font-style: italic;
+    -fx-text-alignment: center;
+}
+
+/* ================================================================
+   PROFILE EDIT DIALOG — same visual language as AETHER
+   [CORRIGIDO] Este diálogo usava cores sólidas e opacas (#0b1220,
+   #111c2e, ...) e o Dialog do JavaFX abre por omissão numa janela do
+   sistema operativo com moldura/barra de título nativa — o resto da
+   AETHER é uma janela sem moldura, translúcida (ver util.WindowUtils),
+   por isso este popup nativo destoava completamente. O controlador agora
+   torna o Stage do diálogo transparente (StageStyle.TRANSPARENT) e este
+   ficheiro passa a desenhá-lo como mais um cartão em vidro, com as
+   mesmas cores rgba translúcidas das ".dash-card" da aplicação.
+   ================================================================ */
+/* [CORRIGIDO 2] O diálogo abre num Stage transparente próprio, que pode
+   ficar por cima de qualquer coisa no ecrã do utilizador (não só do fundo
+   escuro da AETHER) — 0.72 de opacidade deixava passar demasiado do que
+   estivesse por trás e tornava o texto difícil de ler. Opacidade subida
+   para praticamente sólida (continua a ler-se como "vidro" pela borda e
+   sombra, mas garante contraste em qualquer situação). */
+.profile-edit-dialog {
+    -fx-background-color: rgba(13, 19, 33, 0.97);
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1px;
+    -fx-border-radius: 16px;
+    -fx-background-radius: 16px;
+    -fx-padding: 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.55), 30, 0, 0, 10);
+}
+.profile-edit-dialog > .header-panel {
+    -fx-background-color: transparent;
+    -fx-background-radius: 16px 16px 0 0;
+    -fx-padding: 20 24 14 24;
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+.profile-edit-dialog > .header-panel .label {
+    -fx-text-fill: #f8fafc;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+.profile-edit-dialog > .content {
+    -fx-background-color: transparent;
+    -fx-padding: 20px 24px;
+}
+.profile-edit-dialog > .button-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 14 24 20 24;
+    -fx-border-color: rgba(255, 255, 255, 0.08) transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+}
+.profile-edit-grid {
+    -fx-background-color: transparent;
+    -fx-padding: 2 0 2 0;
+}
+.profile-edit-label {
+    -fx-text-fill: #94a3b8;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+.profile-edit-field, .profile-edit-area {
+    -fx-background-color: rgba(10, 15, 26, 0.85);
+    -fx-background-radius: 9px;
+    -fx-border-color: rgba(255, 255, 255, 0.16);
+    -fx-border-radius: 9px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #e2e8f0;
+    -fx-prompt-text-fill: #64748b;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-padding: 9 11;
+}
+.profile-edit-field:focused, .profile-edit-area:focused {
+    -fx-border-color: rgba(129, 140, 248, 0.75);
+    -fx-background-color: rgba(10, 15, 26, 0.95);
+}
+.profile-edit-area {
+    -fx-control-inner-background: rgba(10, 15, 26, 0.85);
+    -fx-min-height: 90px;
+}
+.profile-dialog-photo-status {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 11px;
+    -fx-padding: 0 0 0 4;
+}
+.profile-dialog-primary-btn {
+    -fx-background-color: #6366f1;
+    -fx-background-radius: 8px;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-padding: 8 18;
+    -fx-cursor: hand;
+}
+.profile-dialog-primary-btn:hover { -fx-background-color: #818cf8; }
+.profile-dialog-secondary-btn {
+    -fx-background-color: rgba(255,255,255,0.06);
+    -fx-background-radius: 8px;
+    -fx-border-color: #334155;
+    -fx-border-radius: 8px;
+    -fx-text-fill: #cbd5e1;
+    -fx-padding: 8 14;
+    -fx-cursor: hand;
+}
+.profile-dialog-secondary-btn:hover { -fx-background-color: rgba(255,255,255,0.11); }
+.profile-dialog-danger-btn {
+    -fx-background-color: rgba(239,68,68,0.08);
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(239,68,68,0.35);
+    -fx-border-radius: 8px;
+    -fx-text-fill: #fca5a5;
+    -fx-padding: 8 14;
+    -fx-cursor: hand;
+}
+.profile-dialog-danger-btn:hover { -fx-background-color: rgba(239,68,68,0.15); }
+
+/* =============================================================== */
+/* PROFILE EDIT MODAL — profile_edit.fxml                           */
+/* =============================================================== */
+
+/* Root modal container */
+.profile-modal {
+    -fx-background-color: rgba(7, 11, 20, 0.97);
+    -fx-border-color: rgba(34, 211, 238, 0.18);
+    -fx-border-width: 1px;
+    -fx-border-radius: 20px;
+    -fx-background-radius: 20px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 40, 0, 0, 12);
+    -fx-padding: 0;
+    -fx-spacing: 0;
+    -fx-pref-width: 680px;
+    -fx-max-width: 760px;
+    -fx-max-height: 760px;
+}
+
+/* Header */
+.profile-modal-header {
+    -fx-background-color: transparent;
+    -fx-background-radius: 20px 20px 0 0;
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;
+    -fx-border-width: 0 0 1px 0;
+}
+.profile-modal-header-icon {
+    -fx-font-size: 14px;
+    -fx-text-fill: #22d3ee;
+}
+.profile-modal-title {
+    -fx-text-fill: #f8fafc;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+.profile-modal-subtitle {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 12px;
+}
+.profile-modal-close-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #64748b;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 4 8;
+}
+.profile-modal-close-btn:hover {
+    -fx-text-fill: #22d3ee;
+}
+
+/* Content scroll area */
+.profile-modal-scroll,
+.profile-modal-scroll .viewport,
+.profile-modal-scroll .scroll-pane,
+.profile-modal-scroll .scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+.profile-modal-scroll .content {
+    -fx-background-color: transparent;
+}
+.profile-modal-scroll > .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+.profile-modal-scroll > .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(255, 255, 255, 0.12);
+    -fx-background-radius: 6px;
+}
+
+.profile-modal-content {
+    -fx-background-color: transparent;
+}
+
+/* Profile Photo Card (left column) */
+.profile-photo-card {
+    -fx-background-color: rgba(13, 25, 43, 0.60);
+    -fx-background-radius: 16px;
+    -fx-border-color: rgba(34, 211, 238, 0.12);
+    -fx-border-radius: 16px;
+    -fx-border-width: 1px;
+    -fx-min-width: 220px;
+    -fx-max-width: 240px;
+}
+.profile-photo-card-title {
+    -fx-text-fill: #f8fafc;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.profile-photo-card-desc {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 11px;
+    -fx-line-spacing: 3px;
+}
+
+/* Avatar */
+.profile-photo-avatar-wrapper {
+    -fx-padding: 10;
+}
+.profile-photo-avatar-glow {
+    -fx-fill: rgba(34, 211, 238, 0.06);
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.3), 20, 0, 0, 0);
+}
+.profile-photo-avatar-circle {
+    -fx-fill: rgba(15, 23, 42, 0.95);
+    -fx-stroke: rgba(34, 211, 238, 0.45);
+    -fx-stroke-width: 2px;
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.2), 12, 0, 0, 0);
+}
+.profile-photo-avatar-inner {
+}
+.profile-photo-avatar-initials {
+    -fx-text-fill: #818cf8;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+
+/* Camera button on avatar */
+.profile-photo-camera-btn {
+    -fx-background-color: rgba(10, 20, 36, 0.95);
+    -fx-background-radius: 30px;
+    -fx-border-color: rgba(34, 211, 238, 0.5);
+    -fx-border-radius: 30px;
+    -fx-text-fill: #22d3ee;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-translate-x: 45;
+    -fx-translate-y: 45;
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.3), 10, 0, 0, 0);
+}
+.profile-photo-camera-btn:hover {
+    -fx-background-color: rgba(34, 211, 238, 0.15);
+}
+
+/* Photo buttons */
+.profile-photo-change-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-border-color: rgba(129, 140, 248, 0.45);
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #a5b4fc;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+    -fx-min-width: 180;
+}
+.profile-photo-change-btn:hover {
+    -fx-background-color: rgba(129, 140, 248, 0.1);
+    -fx-border-color: rgba(129, 140, 248, 0.7);
+}
+.profile-photo-remove-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-border-color: rgba(239, 68, 68, 0.35);
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #fca5a5;
+    -fx-font-size: 12px;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+    -fx-min-width: 180;
+}
+.profile-photo-remove-btn:hover {
+    -fx-background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Photo hint text */
+.profile-photo-hint {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 10px;
+    -fx-line-spacing: 4px;
+    -fx-text-alignment: center;
+}
+
+/* Personal Info section (right column) */
+.profile-info-section {
+    -fx-background-color: rgba(13, 25, 43, 0.50);
+    -fx-background-radius: 16px;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-radius: 16px;
+    -fx-border-width: 1px;
+    -fx-hgap: 12;
+}
+
+/* Field labels */
+.profile-field-label {
+    -fx-text-fill: #94a3b8;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+
+/* Text fields */
+.profile-text-field {
+    -fx-background-color: rgba(10, 15, 26, 0.85);
+    -fx-background-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #e2e8f0;
+    -fx-prompt-text-fill: #475569;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-padding: 10 14;
+    -fx-min-height: 40px;
+}
+.profile-text-field:focused {
+    -fx-border-color: rgba(34, 211, 238, 0.6);
+    -fx-background-color: rgba(10, 15, 26, 0.95);
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.1), 8, 0, 0, 0);
+}
+
+/* Text areas */
+.profile-text-area {
+    -fx-background-color: rgba(10, 15, 26, 0.85);
+    -fx-background-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #e2e8f0;
+    -fx-prompt-text-fill: #475569;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 13px;
+    -fx-padding: 10 14;
+    -fx-control-inner-background: rgba(10, 15, 26, 0.85);
+    -fx-min-height: 80px;
+}
+.profile-text-area:focused {
+    -fx-border-color: rgba(34, 211, 238, 0.6);
+    -fx-background-color: rgba(10, 15, 26, 0.95);
+}
+
+/* AI Information Card */
+.ai-info-card {
+    -fx-background-color: rgba(13, 25, 43, 0.70);
+    -fx-background-radius: 14px;
+    -fx-border-color: rgba(99, 102, 241, 0.25);
+    -fx-border-radius: 14px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(99, 102, 241, 0.08), 12, 0, 0, 0);
+}
+.ai-info-icon {
+    -fx-font-size: 14px;
+    -fx-text-fill: #22d3ee;
+}
+.ai-info-title {
+    -fx-text-fill: #c7d2fe;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+.ai-info-text {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 4px;
+}
+
+/* Footer */
+.profile-modal-footer {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0 0 20px 20px;
+    -fx-border-color: rgba(255, 255, 255, 0.06) transparent transparent transparent;
+    -fx-border-width: 1px 0 0 0;
+}
+
+/* Cancel button */
+.profile-cancel-button {
+    -fx-background-color: rgba(255, 255, 255, 0.04);
+    -fx-background-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 10px;
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+    -fx-padding: 9 20;
+}
+.profile-cancel-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-text-fill: #cbd5e1;
+}
+
+/* Save button (primary CTA) */
+.profile-save-button {
+    -fx-background-color: #6366f1;
+    -fx-background-radius: 10px;
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 9 22;
+    -fx-effect: dropshadow(gaussian, rgba(99, 102, 241, 0.4), 12, 0, 0, 0);
+}
+.profile-save-button:hover {
+    -fx-background-color: #818cf8;
+    -fx-effect: dropshadow(gaussian, rgba(129, 140, 248, 0.5), 16, 0, 0, 0);
+}

@@ -11,8 +11,10 @@ import javafx.scene.control.Label;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import session.UserSession;
+import util.AvatarImages;
 import util.OllamaService;
 import util.StyleUtils;
 
@@ -43,12 +45,34 @@ public class DashboardController implements Initializable {
     /** Registo de eventos desta classe. */
     private static final Logger LOGGER = Logger.getLogger(DashboardController.class.getName());
 
+    /**
+     * Instância ativa do shell do dashboard.
+     * <p>
+     * Permite que vistas carregadas dentro de {@code contentArea} (por exemplo
+     * {@link DashboardViewController}, ao clicar no nó central do Context
+     * Graph) peçam navegação para a Profile View sem duplicar a lógica de
+     * troca de vistas já existente neste controlador.
+     * </p>
+     */
+    private static DashboardController activeInstance;
+
+    /**
+     * Devolve a instância ativa do shell do dashboard, ou {@code null} se
+     * ainda não tiver sido inicializada.
+     *
+     * @return a instância ativa, ou {@code null}
+     */
+    public static DashboardController getActive() {
+        return activeInstance;
+    }
+
     /** Caminho da vista do dashboard no classpath. */
     private static final String DASHBOARD_VIEW = "/FXML/dashboard_view.fxml";
 
     /** Caminho da vista do chat AETHER AI no classpath. */
     private static final String AETHER_AI_VIEW = "/FXML/aether_ai.fxml";
     private static final String SETTINGS_VIEW = "/FXML/settings.fxml";
+    private static final String PROFILE_VIEW = "/FXML/profile_view.fxml";
 
     // ------------------------------------------------------------------
     // FXML — Shell
@@ -59,8 +83,8 @@ public class DashboardController implements Initializable {
     @FXML private StackPane contentArea;
     @FXML private StackPane rightArea;
     @FXML private Label userInitialsLabel;
+    @FXML private ImageView userAvatarImageView;
     @FXML private Label userNameLabel;
-    @FXML private HBox userBadgesBox;
     @FXML private Label modelLabel;
     @FXML private Circle modelStatusDot;
 
@@ -73,6 +97,7 @@ public class DashboardController implements Initializable {
     @FXML private Button navTasks;
     @FXML private Button navNotes;
     @FXML private Button navSettings;
+    @FXML private VBox userProfileCard;
 
     // ------------------------------------------------------------------
     // Inicialização
@@ -87,6 +112,7 @@ public class DashboardController implements Initializable {
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        activeInstance = this;
         bindBackgroundSize();
         loadUserProfile();
         loadModelInfo();
@@ -135,20 +161,29 @@ public class DashboardController implements Initializable {
         userNameLabel.setText(displayName);
         userInitialsLabel.setText(extractInitials(fullName));
 
-        userBadgesBox.getChildren().clear();
-        var occupations = profile.getOccupations();
-        if (occupations != null) {
-            for (String occ : occupations) {
-                if (occ != null && !occ.isBlank()) {
-                    Label badge = new Label(occ);
-                    badge.getStyleClass().add("dash-badge-pill");
-                    userBadgesBox.getChildren().add(badge);
-                }
-            }
+        boolean hasPhoto = AvatarImages.applyCenteredCircularImage(
+                userAvatarImageView, profile.getProfilePhotoPath(), 56);
+        if (hasPhoto) {
+            userAvatarImageView.setClip(new Circle(28, 28, 28));
+        } else {
+            userAvatarImageView.setClip(null);
         }
+        userInitialsLabel.setVisible(!hasPhoto);
 
         String finalName = displayName;
         LOGGER.info(() -> "Dashboard initialized for user: " + finalName);
+    }
+
+    /**
+     * Volta a carregar o cartão de perfil da sidebar (nome, iniciais e foto).
+     * <p>
+     * Chamado pela Profile View depois de guardar alterações com sucesso,
+     * para que a sidebar reflita de imediato o novo nome ou foto, sem ser
+     * preciso reiniciar a aplicação.
+     * </p>
+     */
+    public void refreshUserProfileCard() {
+        loadUserProfile();
     }
 
     /**
@@ -381,6 +416,32 @@ public class DashboardController implements Initializable {
      */
     @FXML private void handleNavSettings() {
         loadView(SETTINGS_VIEW, navSettings);
+        rightArea.getChildren().clear();
+    }
+
+    /**
+     * Handler do clique no cartão do utilizador na sidebar.
+     * <p>
+     * O cartão inteiro (avatar, nome, badges e estado) é clicável e navega
+     * para a Profile View, substituindo o antigo item "Profile" da sidebar.
+     * </p>
+     */
+    @FXML private void handleUserProfileCardClick() {
+        showProfileView();
+    }
+
+    /**
+     * Mostra a Profile View no {@code contentArea}.
+     * <p>
+     * Ponto de navegação único para a Profile View, usado tanto pelo cartão
+     * do utilizador na sidebar como por vistas filhas (por exemplo o nó
+     * central do Context Graph no Dashboard) através de {@link #getActive()}.
+     * Como já não existe um item "Profile" na sidebar, nenhum botão de
+     * navegação fica marcado como ativo.
+     * </p>
+     */
+    public void showProfileView() {
+        loadView(PROFILE_VIEW, null);
         rightArea.getChildren().clear();
     }
 

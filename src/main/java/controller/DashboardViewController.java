@@ -10,7 +10,9 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.shape.Circle;
 import session.UserSession;
 
 /**
@@ -54,6 +56,7 @@ public class DashboardViewController implements Initializable {
     @FXML private VBox tasksListContainer;
     @FXML private VBox todayScheduleContainer;
     @FXML private VBox calendarGrid;
+    @FXML private VBox contextGraphContainer;
 
     // ------------------------------------------------------------------
     // Inicialização
@@ -72,6 +75,7 @@ public class DashboardViewController implements Initializable {
         loadTasks();
         loadTodaySchedule();
         renderCalendar();
+        renderContextGraph();
     }
 
     // ------------------------------------------------------------------
@@ -166,6 +170,121 @@ public class DashboardViewController implements Initializable {
         HBox row = new HBox(titleLabel, subLabel);
         row.getStyleClass().add("dash-list-row");
         return row;
+    }
+
+    // ------------------------------------------------------------------
+    // Context Graph
+    // ------------------------------------------------------------------
+
+    /**
+     * Renderiza o Context Graph com o utilizador como nó central.
+     * <p>
+     * O nó central é identificado pelo nome do utilizador e o seu conteúdo
+     * vem do contexto de IA guardado no perfil. Se o contexto estiver vazio,
+     * mostra um estado vazio a convidar o utilizador a preenchê-lo.
+     * </p>
+     */
+    private void renderContextGraph() {
+        contextGraphContainer.getChildren().clear();
+
+        UserSession session = UserSession.getInstance();
+        var profile = session.getUserProfile();
+
+        String fullName = profile.getFullName();
+        if (fullName == null || fullName.isBlank()) {
+            fullName = "AETHER User";
+        }
+
+        String displayName = profile.getPreferredName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = fullName;
+        }
+
+        String displaySummary = profile.getDisplaySummary();
+        boolean hasSummary = displaySummary != null && !displaySummary.isBlank();
+
+        // Nó central do utilizador
+        VBox userNode = new VBox(4);
+        userNode.getStyleClass().add("dash-graph-user-node");
+        userNode.setAlignment(javafx.geometry.Pos.CENTER);
+
+        Circle userCircle = new Circle(30);
+        userCircle.getStyleClass().add("dash-graph-user-circle");
+
+        Label userInitials = new Label(extractInitials(fullName));
+        userInitials.getStyleClass().add("dash-graph-user-initials");
+
+        StackPane avatarPane = new StackPane(userCircle, userInitials);
+        avatarPane.getStyleClass().add("dash-graph-user-avatar");
+
+        Label userNameLabel = new Label(displayName);
+        userNameLabel.getStyleClass().add("dash-graph-user-name");
+
+        Label contextLabel;
+        if (hasSummary) {
+            // No Context Graph, mostra apenas o resumo principal do utilizador.
+            // Os dados completos continuam internamente disponíveis para a IA
+            // através do ContextManager, mas não são exibidos no gráfico.
+            String preview = displaySummary.trim();
+            if (preview.length() > 120) {
+                preview = preview.substring(0, 120).trim() + "...";
+            }
+            contextLabel = new Label(preview);
+            contextLabel.getStyleClass().add("dash-graph-context-preview");
+        } else {
+            contextLabel = new Label("Your context is empty. Tell AETHER about yourself in Profile.");
+            contextLabel.getStyleClass().add("dash-graph-empty-context");
+        }
+
+        contextLabel.setWrapText(true);
+        contextLabel.setMaxWidth(280);
+        contextLabel.setAlignment(javafx.geometry.Pos.CENTER);
+
+        userNode.getChildren().addAll(avatarPane, userNameLabel, contextLabel);
+
+        // O nó central representa a Central Context Note do utilizador — a
+        // mesma nota editável em Profile. Clicar nele abre essa mesma vista,
+        // em vez de apenas selecionar o nó.
+        userNode.getStyleClass().add("dash-graph-user-node-clickable");
+        userNode.setCursor(javafx.scene.Cursor.HAND);
+        userNode.setOnMouseClicked(e -> openCentralContextNote());
+
+        contextGraphContainer.getChildren().add(userNode);
+    }
+
+    /**
+     * Abre a Central Context Note do utilizador.
+     * <p>
+     * Reutiliza a Profile View existente (com o editor de AI Context) através
+     * do shell do dashboard, em vez de criar uma segunda interface de edição.
+     * A Central Context Note é a mesma entidade em Profile, no Context Graph e
+     * no contexto lido pela IA — não existem cópias separadas.
+     * </p>
+     */
+    private void openCentralContextNote() {
+        DashboardController shell = DashboardController.getActive();
+        if (shell != null) {
+            shell.showProfileView();
+        } else {
+            LOGGER.warning("Não foi possível abrir a Central Context Note: shell do dashboard indisponível.");
+        }
+    }
+
+    /**
+     * Extrai as iniciais de um nome completo.
+     *
+     * @param fullName o nome completo do utilizador
+     * @return as iniciais (1 a 2 caracteres), maiúsculas
+     */
+    private String extractInitials(String fullName) {
+        String[] parts = fullName.trim().split("\\s+");
+        if (parts.length == 0 || parts[0].isEmpty()) {
+            return "AU";
+        }
+        if (parts.length == 1) {
+            return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
+        }
+        return (parts[0].charAt(0) + "" + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
     // ------------------------------------------------------------------

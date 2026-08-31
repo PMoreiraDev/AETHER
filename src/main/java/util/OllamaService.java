@@ -827,6 +827,29 @@ public final class OllamaService {
      * @return {@code true} se pelo menos um fragmento tiver sido recebido
      */
     public static boolean chatStream(String modelId, String prompt, Consumer<String> onToken) {
+        return chatStream(modelId, prompt, null, onToken);
+    }
+
+    /**
+     * Envia um prompt ao modelo local do Ollama em modo de streaming, com um
+     * prompt de sistema opcional, entregando cada fragmento de texto assim que
+     * chega, em vez de esperar pela resposta completa.
+     * <p>
+     * O prompt de sistema ({@code system}) é usado para fornecer contexto ao
+     * modelo — por exemplo, o contexto central do utilizador. Quando não
+     * {@code null} nem vazio, é incluído no pedido como o campo {@code system}
+     * da API do Ollama, permitindo que o modelo personalize as respostas com
+     * base nessa informação.
+     * </p>
+     *
+     * @param modelId o identificador do modelo (ex.: {@code llama3.2:1b})
+     * @param prompt o texto enviado ao modelo
+     * @param system o prompt de sistema (contexto); pode ser {@code null}
+     * @param onToken chamado com cada fragmento de texto assim que chega;
+     *                chamado a partir do fio que invocar este método
+     * @return {@code true} se pelo menos um fragmento tiver sido recebido
+     */
+    public static boolean chatStream(String modelId, String prompt, String system, Consumer<String> onToken) {
         if (modelId == null || modelId.isBlank() || prompt == null || prompt.isBlank()) {
             return false;
         }
@@ -836,12 +859,16 @@ public final class OllamaService {
         }
 
         try {
-            String body = "{"
-                    + "\"model\":\"" + escapeJson(modelId) + "\","
-                    + "\"prompt\":\"" + escapeJson(prompt) + "\","
-                    + "\"stream\":true,"
-                    + "\"keep_alive\":\"" + KEEP_ALIVE + "\""
-                    + "}";
+            StringBuilder body = new StringBuilder();
+            body.append("{");
+            body.append("\"model\":\"").append(escapeJson(modelId)).append("\",");
+            body.append("\"prompt\":\"").append(escapeJson(prompt)).append("\",");
+            if (system != null && !system.isBlank()) {
+                body.append("\"system\":\"").append(escapeJson(system)).append("\",");
+            }
+            body.append("\"stream\":true,");
+            body.append("\"keep_alive\":\"").append(KEEP_ALIVE).append("\"");
+            body.append("}");
 
             java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
                     .connectTimeout(java.time.Duration.ofSeconds(10))
@@ -851,7 +878,7 @@ public final class OllamaService {
                     .uri(java.net.URI.create("http://localhost:11434/api/generate"))
                     .timeout(java.time.Duration.ofMinutes(5))
                     .header("Content-Type", "application/json")
-                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body.toString()))
                     .build();
 
             java.net.http.HttpResponse<Stream<String>> response = client.send(request,

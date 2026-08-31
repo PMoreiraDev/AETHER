@@ -91,7 +91,8 @@
                 <children>
 
                     <!-- User Profile Card — formatação igual à imagem de referência -->
-                    <VBox spacing="12" styleClass="dash-profile-card" alignment="CENTER">
+                    <!-- Cartão inteiro é clicável e navega para a Profile View. -->
+                    <VBox fx:id="userProfileCard" spacing="12" styleClass="dash-profile-card, dash-profile-card-clickable" alignment="CENTER" onMouseClicked="#handleUserProfileCardClick">
                         <padding>
                             <Insets top="18" right="16" bottom="18" left="16"/>
                         </padding>
@@ -104,6 +105,8 @@
                                     <StackPane>
                                         <children>
                                             <Circle radius="28" styleClass="dash-avatar-circle"/>
+                                            <ImageView fx:id="userAvatarImageView" fitWidth="56" fitHeight="56"
+                                                       preserveRatio="false" visible="false" mouseTransparent="true"/>
                                             <Label fx:id="userInitialsLabel" text="AU" styleClass="dash-avatar-initials"/>
                                             <!-- Ponto verde de status no canto inferior direito -->
                                             <Circle radius="5" styleClass="dash-avatar-status-dot"
@@ -114,16 +117,15 @@
                             </StackPane>
 
                             <!-- Nome -->
-                            <Label fx:id="userNameLabel" text="AETHER User" styleClass="dash-user-name"/>
-
-                            <!-- Badges (ocupações reais do utilizador) -->
-                            <HBox fx:id="userBadgesBox" spacing="6" alignment="CENTER"/>
+                            <Label fx:id="userNameLabel" text="AETHER User" styleClass="dash-user-name"
+                                   wrapText="true" textAlignment="CENTER" maxWidth="170"/>
 
                             <!-- Linha: AETHER has read your context -->
                             <HBox spacing="6" alignment="CENTER">
                                 <children>
                                     <Circle radius="3" styleClass="dash-aether-dot"/>
-                                    <Label text="AETHER has read your context" styleClass="dash-aether-notice"/>
+                                    <Label text="AETHER has read your context" styleClass="dash-aether-notice"
+                                           wrapText="true" textAlignment="CENTER" maxWidth="150"/>
                                 </children>
                             </HBox>
                         </children>
