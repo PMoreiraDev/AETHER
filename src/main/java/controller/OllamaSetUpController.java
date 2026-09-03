@@ -90,7 +90,7 @@ public class OllamaSetUpController {
      * modelo), o botão "Next" navega para o dashboard principal do AETHER.
      * </p>
      */
-    private static final String NEXT_STEP_VIEW = "/FXML/dashboard.fxml";
+    private static final String NEXT_STEP_VIEW = "/FXML/obsidian_setup.fxml";
 
     /** Painel de raiz do ecrã, usado como origem da navegação. */
     @FXML

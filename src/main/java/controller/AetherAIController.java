@@ -1,6 +1,8 @@
 package controller;
 
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.logging.Logger;
 import javafx.application.Platform;
@@ -18,6 +20,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import session.UserSession;
+import session.ChatSession;
 import util.ContextManager;
 import util.OllamaService;
 
@@ -79,6 +82,15 @@ public class AetherAIController implements Initializable {
     private boolean awaitingResponse = false;
 
     /**
+     * Histórico da conversa, persistido entre trocas de vista através do
+     * {@link session.ChatSession}. Sem isto, mudar de vista (ex.: ir ao
+     * Dashboard e voltar) recriaria o controlador e apagaria a conversa. A
+     * conversa só é reiniciada quando o utilizador clica em "Nova conversa".
+     */
+    private final List<OllamaService.ChatMessage> conversationHistory =
+            session.ChatSession.getInstance().getHistory();
+
+    /**
      * Modelo ativo de facto, resolvido em {@link #warmUpEngine} contra o que
      * está realmente instalado — pode diferir do valor guardado em
      * {@link domain.AppSettings#getActiveModelId()} se esse modelo não tiver
@@ -107,7 +119,7 @@ public class AetherAIController implements Initializable {
         if (modelId != null && !modelId.isBlank()) {
             activeModelId = modelId;
             modelLabel.setText("Local model: " + modelId);
-            addWelcomeMessage();
+            restoreConversation();
             warmUpEngine(modelId);
         } else {
             modelLabel.setText("No model configured");
@@ -223,6 +235,24 @@ public class AetherAIController implements Initializable {
         addMessage("Hello, " + name + ".",
                 "I'm AETHER, your local AI assistant. I run entirely on your device — nothing leaves this machine.\n\nWhat can I help you with today?",
                 false);
+    }
+
+    /**
+     * Restaura a conversa persistida no {@link session.ChatSession}. Se houver
+     * histórico anterior (de antes de mudar de vista), as bolhas são
+     * recriadas para o utilizador continuar onde deixou. Se não houver, mostra
+     * a mensagem de boas-vindas.
+     */
+    private void restoreConversation() {
+        if (!conversationHistory.isEmpty()) {
+            for (OllamaService.ChatMessage m : conversationHistory) {
+                boolean isUser = "user".equals(m.getRole());
+                addMessage(isUser ? "You" : "AETHER", m.getContent(), isUser);
+            }
+            scrollToBottom();
+        } else {
+            addWelcomeMessage();
+        }
     }
 
     /**
@@ -347,6 +377,12 @@ public class AetherAIController implements Initializable {
         Label replyLabel = addMessageReturningLabel("AETHER", "", false);
         StringBuilder fullReply = new StringBuilder();
 
+        // Snapshot do histórico antes da thread de fundo para evitar
+        // mutação concorrente enquanto a resposta é gerada.
+        List<OllamaService.ChatMessage> requestHistory = new ArrayList<>(conversationHistory);
+        // Adiciona a mensagem atual do utilizador ao snapshot enviado à IA.
+        requestHistory.add(new OllamaService.ChatMessage("user", message.trim()));
+
         // Tarefa de fundo para chamar o Ollama. Se nada for recebido, o
         // próprio fio de fundo faz o diagnóstico (evita nova ronda de rede no
         // fio da interface) e o motivo passa a ser mostrado ao utilizador em
@@ -358,8 +394,17 @@ public class AetherAIController implements Initializable {
                 // system instructions + dynamic date/time + compact summary + relevant context.
                 // O contexto é selecionado com base na mensagem do utilizador,
                 // em vez de enviar indiscriminadamente toda a base de dados.
-                String systemContext = ContextManager.buildSystemPrompt(message.trim());
-                boolean received = OllamaService.chatStream(modelId, message.trim(), systemContext, token -> {
+                //
+                // Para a seleção de contexto, usamos não só a mensagem atual
+                // mas também as últimas mensagens do utilizador no histórico.
+                // Isto resolve perguntas de seguimento como "e o trabalho
+                // dele?" — a mensagem atual não menciona "Rafael", mas o
+                // turno anterior sim, pelo que o contexto certo é recuperado.
+                String contextQuery = buildContextQuery(message.trim(), conversationHistory);
+                String systemContext = ContextManager.buildSystemPrompt(contextQuery);
+                // Usa /api/chat com o histórico completo para que a IA recorde
+                // os turnos anteriores da conversa.
+                boolean received = OllamaService.chatStream(modelId, requestHistory, systemContext, token -> {
                     fullReply.append(token);
                     String snapshot = fullReply.toString();
                     Platform.runLater(() -> {
@@ -374,7 +419,17 @@ public class AetherAIController implements Initializable {
             }
         };
 
-        chatTask.setOnSucceeded(e -> setAwaiting(false));
+        chatTask.setOnSucceeded(e -> {
+            // Só guarda a resposta no histórico se realmente foi recebida,
+            // para não corromper a memória com respostas vazias. Grava no
+            // ChatSession para a conversa persistir entre trocas de vista.
+            String reply = fullReply.toString().trim();
+            if (!reply.isBlank()) {
+                ChatSession.getInstance().addUserMessage(message.trim());
+                ChatSession.getInstance().addAssistantMessage(reply);
+            }
+            setAwaiting(false);
+        });
 
         chatTask.setOnFailed(e -> {
             Throwable error = chatTask.getException();
@@ -389,6 +444,58 @@ public class AetherAIController implements Initializable {
         Thread thread = new Thread(chatTask, "aether-ai-chat");
         thread.setDaemon(true);
         thread.start();
+    }
+
+
+    /**
+     * Constrói a consulta usada para selecionar o contexto do vault. Combina a
+     * mensagem atual com as últimas mensagens do utilizador no histórico, para
+     * que perguntas de seguimento como "e o trabalho dele?" consigam
+     * recuperar a entidade certa (Rafael) mesmo quando a mensagem atual não
+     * menciona o nome diretamente.
+     *
+     * @param currentMessage a mensagem atual do utilizador
+     * @param history         o histórico da conversa
+     * @return a consulta combinada para seleção de contexto
+     */
+    private String buildContextQuery(String currentMessage,
+                                     List<OllamaService.ChatMessage> history) {
+        StringBuilder query = new StringBuilder(currentMessage);
+        // Acrescenta até às duas últimas mensagens do utilizador, que é onde
+        // costumam estar os nomes e tópicos a que o utilizador se refere.
+        int added = 0;
+        for (int i = history.size() - 1; i >= 0 && added < 2; i--) {
+            OllamaService.ChatMessage m = history.get(i);
+            if ("user".equals(m.getRole()) && m.getContent() != null
+                    && !m.getContent().isBlank()) {
+                query.append(" ").append(m.getContent());
+                added++;
+            }
+        }
+        return query.toString();
+    }
+
+    /**
+     * Limpa o histórico da conversa atual. Útil quando o utilizador começa um
+     * novo tópico e não quer que a IA continue a referenciar o contexto
+     * anterior.
+     */
+    public void clearConversation() {
+        ChatSession.getInstance().clear();
+    }
+
+    /**
+     * Inicia uma nova conversa: limpa a memória persistida e a área de
+     * mensagens. O utilizador usa o botão "Nova conversa" quando muda de
+     * tópico para que a IA não misture contexto de assuntos diferentes.
+     */
+    @FXML
+    private void handleNewConversation() {
+        clearConversation();
+        if (messagesContainer != null) {
+            messagesContainer.getChildren().clear();
+        }
+        addWelcomeMessage();
     }
 
     /**

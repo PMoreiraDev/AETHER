@@ -7,13 +7,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
@@ -55,7 +55,7 @@ public class ProfileEditController {
     // FXML — Info fields
     @FXML private TextField fullNameField;
     @FXML private TextField preferredNameField;
-    @FXML private TextField birthdayField;
+    @FXML private DatePicker birthdayField;
     @FXML private TextField occupationsField;
     @FXML private TextArea aboutField;
 
@@ -76,8 +76,24 @@ public class ProfileEditController {
      */
     @FXML
     private void initialize() {
-        // Clip circular no ImageView para que a foto apareça redonda
-        avatarImageView.setClip(new Circle(0, 0, 58));
+        // Clip circular no ImageView para que a foto apareça redonda.
+        // O centro do clip tem de coincidir com o centro do ImageView
+        // (fitWidth/fitHeight = 116, raio 58), senão só aparece um quarto da
+        // imagem no canto superior esquerdo — era o bug da previsualização.
+        avatarImageView.setClip(new Circle(58, 58, 58));
+
+        // Um aniversário nunca pode ser uma data futura — desativa
+        // visualmente esses dias no calendário do DatePicker.
+        birthdayField.setDayCellFactory(picker -> new javafx.scene.control.DateCell() {
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                if (date != null && date.isAfter(LocalDate.now())) {
+                    setDisable(true);
+                    setStyle("-fx-opacity: 0.35;");
+                }
+            }
+        });
     }
 
     /**
@@ -96,8 +112,7 @@ public class ProfileEditController {
         // Preencher campos
         fullNameField.setText(profile.getFullName());
         preferredNameField.setText(profile.getPreferredName());
-        birthdayField.setText(profile.getBirthDate() == null
-                ? "" : profile.getBirthDate().format(DateTimeFormatter.ofPattern("d/M/yyyy")));
+        birthdayField.setValue(profile.getBirthDate());
         occupationsField.setText(String.join(", ", profile.getOccupations()));
         aboutField.setText(profile.getAbout());
 
@@ -163,11 +178,7 @@ public class ProfileEditController {
             return;
         }
 
-        LocalDate parsedBirthday = parseBirthday(birthdayField.getText());
-        if (!birthdayField.getText().isBlank() && parsedBirthday == null) {
-            LOGGER.warning("Save blocked: invalid birthday format");
-            return;
-        }
+        LocalDate parsedBirthday = birthdayField.getValue();
 
         // Atualizar o perfil (mesma instância da sessão)
         List<String> roles = new ArrayList<>();
@@ -251,22 +262,6 @@ public class ProfileEditController {
         } catch (IOException | RuntimeException e) {
             LOGGER.warning("Could not copy profile photo: " + e.getMessage());
             return "";
-        }
-    }
-
-    /**
-     * Faz o parse da data de aniversário no formato d/M/yyyy.
-     */
-    private LocalDate parseBirthday(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
-        }
-        try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("d/M/yyyy");
-            LocalDate date = LocalDate.parse(raw.trim().replaceAll("\\s*/\\s*", "/"), formatter);
-            return date.isBefore(LocalDate.now()) || date.equals(LocalDate.now()) ? date : null;
-        } catch (RuntimeException e) {
-            return null;
         }
     }
 }

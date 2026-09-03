@@ -58,6 +58,8 @@
                     <children>
                         <Circle fx:id="statusDot" radius="5" styleClass="indicador-sucesso"/>
                         <Label fx:id="statusLabel" text="Ready" styleClass="ai-status-label"/>
+                        <Region prefWidth="12"/>
+                        <Button text="＋ Nova conversa" styleClass="ai-new-chat-btn" onAction="#handleNewConversation"/>
                     </children>
                 </HBox>
             </children>

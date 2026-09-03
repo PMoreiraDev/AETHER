@@ -1,13 +1,27 @@
 package util;
 
 import domain.UserProfile;
+import domain.entities.Event;
+import domain.entities.Note;
+import domain.entities.Person;
+import domain.entities.Project;
+import domain.entities.Task;
+import persistence.VaultManager;
 import session.UserSession;
 
+import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Context Manager — arquitetura de contexto para a IA do AETHER.
@@ -68,7 +82,7 @@ public class ContextManager {
     public static String buildSystemPrompt(String userMessage) {
         UserProfile profile = UserSession.getInstance().getUserProfile();
         if (profile == null) {
-            return buildSystemPromptWithoutProfile();
+            return buildSystemPromptWithoutProfile(userMessage);
         }
 
         StringBuilder prompt = new StringBuilder();
@@ -85,6 +99,11 @@ public class ContextManager {
         // 4. Relevant context selection based on user message
         prompt.append(selectRelevantContext(profile, userMessage));
 
+        // 5. Relevant vault entities (People, Projects, Events, Tasks, Notes)
+        //    retrieved from the local markdown vault, filtered by the user
+        //    message so the AI knows the entities the user has created.
+        prompt.append(buildRelevantVaultContext(userMessage));
+
         return prompt.toString().trim();
     }
 
@@ -100,30 +119,32 @@ public class ContextManager {
                 You are AETHER AI, a personal intelligent assistant.
                 Think carefully before answering.
                 Always use the provided current date and time.
-                Never invent personal information about the user.
 
-                CONTEXT HANDLING RULES:
-                1. CONFIRMED information: data the user explicitly provided in their profile or during conversation. You may use this freely.
-                2. INFERRED information: context the AI has inferred but the user has not explicitly confirmed. You may use this cautiously, but never present it as fact.
-                3. TEMPORARY information: details relevant only to the current conversation. Do not persist these.
-
-                PROFILE UPDATE RULES:
-                - When the user provides new persistent personal information, identify it as a possible profile update.
-                - Suggest the user add it to their profile, but do NOT assume it has been added.
-                - The AI can suggest changes to the profile, but only the user can confirm them.
-                - Never auto-save profile changes. Always ask for explicit confirmation.
-                - Maintain a clear separation between confirmed information and inferred information.
+                KNOWLEDGE AND ATTRIBUTION RULES (very important):
+                - The PEOPLE, EVENTS, TASKS, NOTES, and PROJECTS listed under VAULT CONTEXT are your own confirmed knowledge about the user's life. Treat them as facts you already know.
+                - NEVER attribute this information to the user. Do NOT say "you mentioned", "as you said", "you told me", "from what you said", "earlier you said", or anything similar.
+                - State these facts directly as your own knowledge. For example, say "O teu irmão é o Miguel" — not "mencionaste que o teu irmão é o Miguel".
+                - You learned these facts because the user stored them in their AETHER vault. You do not need to explain how you know them.
+                - When you do not know something, say so plainly. Do not invent facts that are not in the vault context or the conversation.
 
                 DATE AND TIME RULES:
-                - Always calculate age from the birthday and the current date provided.
+                - Use the CURRENT DATE provided to calculate a person's age from their birthday (e.g., born 1990-05-15, current date 2026-09-03 → 36 years old).
+                - When asked a person's age or birthday, answer using the birthday in the vault context and the current date.
                 - Interpret relative dates (today, tomorrow, next week, etc.) using the current date.
                 - When discussing deadlines or time-sensitive topics, reference the current date.
+
+                CONVERSATION MEMORY:
+                - You receive the full conversation history. You may freely reference anything said earlier in this conversation.
+                - Do not announce that you remember things. Just use the context naturally.
+
+                PROFILE UPDATE RULES:
+                - When the user provides new persistent personal information not yet in the vault, you may suggest adding it to their profile or creating an entity for it.
+                - Never auto-save profile changes. Always ask for explicit confirmation.
 
                 RESPONSE RULES:
                 - Be concise but thorough.
                 - Ask a focused clarification only when the request genuinely cannot be answered safely or accurately.
-                - Use the user's profile information when relevant to the conversation.
-                - Do not mention that you have access to profile data unless it is relevant to do so.
+                - Answer in the same language the user is writing in (Portuguese if they write in Portuguese).
 
                 """;
     }
@@ -334,10 +355,523 @@ public class ContextManager {
      *
      * @return prompt de sistema sem perfil
      */
-    private static String buildSystemPromptWithoutProfile() {
+    private static String buildSystemPromptWithoutProfile(String userMessage) {
         StringBuilder prompt = new StringBuilder();
         prompt.append(buildSystemInstructions());
         prompt.append(buildDynamicDateTime());
+        // Mesmo sem perfil, as entidades do vault continuam disponíveis à IA e
+        // são filtradas pela mensagem do utilizador.
+        prompt.append(buildRelevantVaultContext(userMessage));
         return prompt.toString().trim();
+    }
+
+    // ------------------------------------------------------------------
+    // Vault entity context — retrieval & matching
+    // ------------------------------------------------------------------
+
+    /** Número máximo de entidades incluídas no contexto, para o manter compacto. */
+    private static final int MAX_ENTITIES = 25;
+
+    /** Palavras vazias ignoradas na tokenização da mensagem do utilizador. */
+    private static final Set<String> STOPWORDS = Set.of(
+            "the", "what", "who", "whom", "whose", "is", "are", "was", "were", "be", "been",
+            "being", "do", "does", "did", "i", "you", "he", "she", "it", "we", "they", "me",
+            "him", "her", "us", "them", "my", "your", "his", "its", "our", "their", "with",
+            "about", "for", "from", "to", "and", "or", "of", "in", "on", "at", "by", "as",
+            "an", "a", "have", "has", "had", "tell", "show", "list", "find", "give", "please",
+            "can", "could", "would", "should", "will", "that", "this", "these", "those", "there",
+            "here", "when", "where", "why", "how", "which", "related", "associated", "between",
+            "also", "too", "very", "much", "some", "any", "all", "get", "want", "need",
+            // Portuguese stop words — the user writes in Portuguese, so generic
+            // question/filler words must be filtered to avoid false-positive
+            // entity matches (e.g. "quem", "meu", "para" matching every entity).
+            "que", "quem", "qual", "quais", "onde", "quando", "porque", "por", "como",
+            "para", "com", "sem", "sobre", "entre", "ate", "mas", "tambem", "muito",
+            "algum", "alguma", "alguns", "algumas", "todo", "toda", "todos", "todas",
+            "este", "esta", "isso", "esse", "essa", "aquele", "aquela", "isto", "aquilo",
+            "meu", "minha", "meus", "minhas", "teu", "tua", "seu", "sua", "seus", "suas",
+            "nosso", "nossa", "vosso", "vossa", "tenho", "tem", "tinha", "quer", "quero",
+            "preciso", "saber", "dizer", "mostrar", "listar", "encontrar", "dar", "fazer",
+            "uma", "umas", "uns", "um", "dos", "das", "num", "numa");
+
+    /**
+     * Palavras-chave genéricas (EN/PT, singular/plural) que indicam que o
+     * utilizador está a perguntar por uma categoria inteira de entidades, em
+     * vez de nomear uma entidade específica. Nunca contém nomes próprios —
+     * apenas os nomes dos próprios tipos de entidade, pelo que funciona para
+     * qualquer vault sem qualquer hardcode específico do utilizador.
+     */
+    private static final Map<String, Set<String>> CATEGORY_KEYWORDS = Map.of(
+            "person", Set.of(
+                    "pessoa", "pessoas", "person", "people", "contacto", "contactos",
+                    "contact", "contacts", "conhecidos", "amigo", "amigos", "friend", "friends"),
+            "project", Set.of(
+                    "projeto", "projetos", "project", "projects"),
+            "event", Set.of(
+                    "evento", "eventos", "event", "events", "compromisso", "compromissos",
+                    "agenda", "calendario", "calendar", "reuniao", "reunioes", "meeting", "meetings"),
+            "task", Set.of(
+                    "tarefa", "tarefas", "task", "tasks", "afazer", "afazeres",
+                    "todo", "todos", "pendencia", "pendencias", "pendente", "pendentes"),
+            "note", Set.of(
+                    "nota", "notas", "note", "notes", "anotacao", "anotacoes")
+    );
+
+    /**
+     * Deteta as categorias de entidade sobre as quais o utilizador está a
+     * perguntar de forma genérica (ex.: "quais são as minhas tarefas?"),
+     * comparando os tokens da mensagem (já normalizados, sem diacríticos e
+     * sem stop words) com {@link #CATEGORY_KEYWORDS}.
+     *
+     * @param msgTokens tokens significativos da mensagem do utilizador
+     * @return conjunto dos tipos de entidade pedidos (ex.: "task", "note")
+     */
+    private static Set<String> detectRequestedCategories(List<String> msgTokens) {
+        if (msgTokens.isEmpty()) {
+            return Set.of();
+        }
+        Set<String> requested = new LinkedHashSet<>();
+        for (Map.Entry<String, Set<String>> entry : CATEGORY_KEYWORDS.entrySet()) {
+            for (String token : msgTokens) {
+                if (entry.getValue().contains(token)) {
+                    requested.add(entry.getKey());
+                    break;
+                }
+            }
+        }
+        return requested;
+    }
+
+    /**
+     * Resumo compacto de uma entidade do vault para inclusão no contexto da IA.
+     */
+    private static final class EntityInfo {
+        final String type;
+        final String label;
+        final String summary;
+        final String normText;   // label + summary normalizados (sem diacríticos)
+        final Set<String> textTokens;
+
+        EntityInfo(String type, String label, String summary) {
+            this.type = type;
+            this.label = label == null ? "" : label;
+            this.summary = summary == null ? "" : summary;
+            this.normText = normalize(this.label + " " + this.summary);
+            this.textTokens = new HashSet<>(Arrays.asList(normText.split("[^a-z0-9]+")));
+        }
+    }
+
+    /**
+     * Recolhe todas as entidades do vault e devolve as relevantes para a
+     * mensagem do utilizador, formatadas de forma compacta.
+     * <p>
+     * Não envia o vault inteiro: seleciona entidades cujo nome aparece na
+     * mensagem (com normalização de diacríticos) e expande por menções e
+     * wikilinks, com um limite máximo.
+     * </p>
+     *
+     * @param userMessage a mensagem do utilizador
+     * @return secção de entidades relevantes, ou string vazia
+     */
+    private static String buildRelevantVaultContext(String userMessage) {
+        if (!VaultManager.isVaultInitialized()) {
+            return "";
+        }
+
+        List<EntityInfo> all;
+        try {
+            all = collectVaultEntities();
+        } catch (Exception e) {
+            return "";
+        }
+        if (all.isEmpty()) {
+            return "";
+        }
+
+        String msgNorm = normalize(userMessage);
+        List<String> msgTokens = tokenize(userMessage);
+
+        // Sem mensagem: não há forma de filtrar, pelo que não se inclui nada.
+        // O resumo do utilizador e a data continuam disponíveis.
+        if (msgTokens.isEmpty() && msgNorm.isBlank()) {
+            return "";
+        }
+
+        LinkedHashSet<EntityInfo> matched = new LinkedHashSet<>();
+
+        // Phase 0 — category-wide recall. Name/keyword matching (Phase 1
+        // below) only works when the user names a specific entity ("who is
+        // João?"). It never fires for generic, category-level questions like
+        // "what are my tasks", "lista os meus projetos" or "que notas
+        // tenho?" — there is no entity name to match against. Without this
+        // phase the AI could only ever "see" an entity the user had already
+        // named, which in practice meant People (usually asked about by
+        // name, e.g. "who is X") while Projects/Events/Tasks/Notes stayed
+        // invisible unless the exact title happened to appear in the
+        // message. Detecting the *type* the user is asking about (generic
+        // words, not hardcoded entity names) and pulling in every entity of
+        // that type fixes this for all five entity types symmetrically.
+        Set<String> requestedCategories = detectRequestedCategories(msgTokens);
+        if (!requestedCategories.isEmpty()) {
+            for (EntityInfo e : all) {
+                if (requestedCategories.contains(e.type)) {
+                    matched.add(e);
+                }
+            }
+        }
+
+        // Phase 1 — direct match by entity name/title OR by the entity's
+        // description text mentioning a concept from the user's question.
+        // The second check fixes the case where the user asks "who is my
+        // brother?" and the answer is a Person named "Rafael" whose
+        // description says "my brother" — the name "Rafael" is not in the
+        // question, but the concept "brother/irmao" is in the description.
+        for (EntityInfo e : all) {
+            if (labelMatches(e.label, msgTokens, msgNorm)
+                    || textMentionsAny(e, msgTokens)) {
+                matched.add(e);
+            }
+        }
+
+        // Tokens de nome das pessoas/projetos já correspondidos, para
+        // expansão por menções noutras entidades.
+        List<String> matchedNameTokens = new ArrayList<>();
+        List<String> matchedLabels = new ArrayList<>();
+        for (EntityInfo e : matched) {
+            if ("person".equals(e.type) || "project".equals(e.type)) {
+                matchedNameTokens.addAll(tokenize(e.label));
+                matchedLabels.add(normalize(e.label));
+            }
+        }
+
+        // Phase 2 — entidades cujo texto menciona um nome correspondido.
+        if (!matchedNameTokens.isEmpty() || !matchedLabels.isEmpty()) {
+            for (EntityInfo e : all) {
+                if (matched.contains(e)) {
+                    continue;
+                }
+                if (textMentionsAny(e, matchedNameTokens)
+                        || textContainsAny(e, matchedLabels)) {
+                    matched.add(e);
+                }
+            }
+        }
+
+        // Phase 3 — expansão reversa: entidades referenciadas pelas já
+        // incluídas (por menção de nome no texto ou wikilinks). Limitado a
+        // duas iterações para evitar explosão do contexto.
+        int iter = 0;
+        boolean changed = true;
+        while (changed && iter < 2) {
+            changed = false;
+            List<EntityInfo> current = new ArrayList<>(matched);
+            for (EntityInfo e : current) {
+                for (EntityInfo other : all) {
+                    if (matched.contains(other)) {
+                        continue;
+                    }
+                    List<String> otherTokens = tokenize(other.label);
+                    if (!otherTokens.isEmpty()
+                            && (textMentionsAny(e, otherTokens)
+                            || textContainsAny(e, List.of(normalize(other.label))))) {
+                        matched.add(other);
+                        changed = true;
+                    }
+                }
+            }
+            iter++;
+        }
+
+        if (matched.isEmpty()) {
+            return "";
+        }
+
+        // Limite máximo: preserva a ordem de relevância (correspondências
+        // diretas primeiro).
+        if (matched.size() > MAX_ENTITIES) {
+            List<EntityInfo> limited = new ArrayList<>(matched).subList(0, MAX_ENTITIES);
+            matched = new LinkedHashSet<>(limited);
+        }
+
+        return formatEntityContext(matched);
+    }
+
+    /**
+     * Recolhe todas as entidades do vault numa lista de {@link EntityInfo}.
+     *
+     * @return lista de entidades
+     */
+    private static List<EntityInfo> collectVaultEntities() {
+        List<EntityInfo> list = new ArrayList<>();
+        for (Person p : VaultManager.listPeople()) {
+            list.add(new EntityInfo("person", p.getName(), buildPersonSummary(p)));
+        }
+        for (Project p : VaultManager.listProjects()) {
+            list.add(new EntityInfo("project", p.getName(), buildProjectSummary(p)));
+        }
+        for (Event e : VaultManager.listEvents()) {
+            list.add(new EntityInfo("event", e.getTitle(), buildEventSummary(e)));
+        }
+        for (Task t : VaultManager.listTasks()) {
+            list.add(new EntityInfo("task", t.getTitle(), buildTaskSummary(t)));
+        }
+        for (Note n : VaultManager.listNotes()) {
+            list.add(new EntityInfo("note", noteLabel(n), buildNoteSummary(n)));
+        }
+        return list;
+    }
+
+    /**
+     * Formata as entidades correspondidas em secções compactas por tipo.
+     *
+     * @param matched entidades correspondidas
+     * @return texto formatado
+     */
+    private static String formatEntityContext(LinkedHashSet<EntityInfo> matched) {
+        StringBuilder sb = new StringBuilder("\nVAULT ENTITIES (relevant to your question)\n");
+
+        // Grafo de wikilinks construído uma única vez para todas as entidades.
+        Map<String, List<String>> graph;
+        try {
+            graph = VaultManager.buildGraphData();
+        } catch (Exception ex) {
+            graph = Map.of();
+        }
+        StringBuilder relationships = new StringBuilder();
+
+        appendEntitySection(sb, matched, "person", "PEOPLE", e ->
+                "- " + e.label + " — " + e.summary);
+        appendEntitySection(sb, matched, "project", "PROJECTS", e ->
+                "- " + e.label + " — " + e.summary);
+        appendEntitySection(sb, matched, "event", "EVENTS", e ->
+                "- " + e.label + " — " + e.summary);
+        appendEntitySection(sb, matched, "task", "TASKS", e ->
+                "- " + e.label + " — " + e.summary);
+        appendEntitySection(sb, matched, "note", "NOTES", e ->
+                "- " + e.label);
+
+        // Relações (wikilinks) presentes nos dados das entidades incluídas.
+        for (EntityInfo e : matched) {
+            if (e.label == null || e.label.isBlank()) {
+                continue;
+            }
+            List<String> links = graph.getOrDefault(e.label, List.of());
+            if (!links.isEmpty()) {
+                relationships.append("- ").append(e.label)
+                        .append(" links to: ")
+                        .append(String.join(", ", links))
+                        .append("\n");
+            }
+        }
+        if (relationships.length() > 0) {
+            sb.append("RELATIONSHIPS:\n").append(relationships);
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Anexa uma secção de entidades de um tipo, se houver alguma.
+     */
+    private static void appendEntitySection(StringBuilder sb,
+                                            LinkedHashSet<EntityInfo> matched,
+                                            String type, String header,
+                                            java.util.function.Function<EntityInfo, String> line) {
+        List<String> lines = new ArrayList<>();
+        for (EntityInfo e : matched) {
+            if (type.equals(e.type)) {
+                lines.add(line.apply(e));
+            }
+        }
+        if (!lines.isEmpty()) {
+            sb.append(header).append(":\n");
+            for (String l : lines) {
+                sb.append(l).append("\n");
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Entity summaries (compact, one-line)
+    // ------------------------------------------------------------------
+
+    private static String buildPersonSummary(Person p) {
+        StringBuilder sb = new StringBuilder();
+        if (p.getBirthDate() != null) {
+            sb.append("Born ").append(p.getBirthDate().format(DATE_FORMATTER)).append(".");
+        }
+        if (!p.getOccupation().isBlank()) {
+            if (!sb.isEmpty()) {
+                sb.append(" ");
+            }
+            sb.append(p.getOccupation()).append(".");
+        }
+        if (!p.getAbout().isBlank()) {
+            if (!sb.isEmpty()) {
+                sb.append(" ");
+            }
+            sb.append(truncate(p.getAbout(), 120));
+        }
+        return sb.toString().trim();
+    }
+
+    private static String buildProjectSummary(Project p) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(p.getStatus().name());
+        if (!p.getDescription().isBlank()) {
+            sb.append(". ").append(truncate(p.getDescription(), 120));
+        }
+        return sb.toString().trim();
+    }
+
+    private static String buildEventSummary(Event e) {
+        StringBuilder sb = new StringBuilder();
+        if (e.getStartDateTime() != null) {
+            sb.append(e.getStartDateTime().format(DATETIME_FORMATTER));
+        }
+        if (!e.getLocation().isBlank()) {
+            sb.append(" @ ").append(e.getLocation());
+        }
+        if (!e.getDescription().isBlank()) {
+            sb.append(". ").append(truncate(e.getDescription(), 100));
+        }
+        return sb.toString().trim();
+    }
+
+    private static String buildTaskSummary(Task t) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(t.getStatus().name());
+        if (t.getPriority() != null) {
+            sb.append(" / ").append(t.getPriority().name());
+        }
+        if (t.getDeadline() != null) {
+            sb.append(" (due ").append(t.getDeadline().format(DATETIME_FORMATTER)).append(")");
+        }
+        if (!t.getDescription().isBlank()) {
+            sb.append(". ").append(truncate(t.getDescription(), 100));
+        }
+        return sb.toString().trim();
+    }
+
+    private static String buildNoteSummary(Note n) {
+        return truncate(n.getContent(), 200);
+    }
+
+    /**
+     * Deriva um título curto para uma nota a partir do seu conteúdo.
+     */
+    private static String noteLabel(Note n) {
+        String content = n.getContent();
+        if (content == null || content.isBlank()) {
+            return "Untitled Note";
+        }
+        String firstLine = content.trim().split("\n")[0];
+        if (firstLine.startsWith("# ")) {
+            firstLine = firstLine.substring(2).trim();
+        } else if (firstLine.startsWith("#")) {
+            firstLine = firstLine.substring(1).trim();
+        }
+        if (firstLine.length() > 60) {
+            return firstLine.substring(0, 60).trim() + "...";
+        }
+        return firstLine.isEmpty() ? "Untitled Note" : firstLine;
+    }
+
+    /**
+     * Trunca um texto a um comprimento máximo, adicionando reticências.
+     */
+    private static String truncate(String text, int max) {
+        if (text == null) {
+            return "";
+        }
+        String t = text.trim().replace("\n", " ").replaceAll("\s+", " ");
+        if (t.length() <= max) {
+            return t;
+        }
+        return t.substring(0, max).trim() + "...";
+    }
+
+    // ------------------------------------------------------------------
+    // Matching helpers (diacritic-insensitive)
+    // ------------------------------------------------------------------
+
+    /**
+     * Normaliza uma string: minúsculas e sem diacríticos.
+     */
+    private static String normalize(String s) {
+        if (s == null) {
+            return "";
+        }
+        return Normalizer.normalize(s, Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .toLowerCase();
+    }
+
+    /**
+     * Tokeniza uma mensagem em termos significativos (sem stop words).
+     */
+    private static List<String> tokenize(String s) {
+        String n = normalize(s);
+        List<String> tokens = new ArrayList<>();
+        for (String t : n.split("[^a-z0-9]+")) {
+            if (t.length() >= 3 && !STOPWORDS.contains(t)) {
+                tokens.add(t);
+            }
+        }
+        return tokens;
+    }
+
+    /**
+     * Verifica se o nome/título de uma entidade corresponde à mensagem
+     * (por token exato ou por o nome completo aparecer na mensagem).
+     */
+    private static boolean labelMatches(String label, List<String> msgTokens, String msgNorm) {
+        if (label == null || label.isBlank()) {
+            return false;
+        }
+        String labelNorm = normalize(label);
+        if (labelNorm.isBlank()) {
+            return false;
+        }
+        if (msgNorm.contains(labelNorm)) {
+            return true;
+        }
+        for (String t : labelNorm.split("[^a-z0-9]+")) {
+            if (t.length() >= 3 && !STOPWORDS.contains(t) && msgTokens.contains(t)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Verifica se o texto de uma entidade menciona algum dos tokens dados
+     * (correspondência de palavra inteira, sem diacríticos).
+     */
+    private static boolean textMentionsAny(EntityInfo e, List<String> tokens) {
+        if (tokens == null || tokens.isEmpty() || e.textTokens.isEmpty()) {
+            return false;
+        }
+        for (String t : tokens) {
+            if (t != null && t.length() >= 3 && e.textTokens.contains(t)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Verifica se o texto normalizado de uma entidade contém algum dos labels.
+     */
+    private static boolean textContainsAny(EntityInfo e, List<String> labels) {
+        if (labels == null || labels.isEmpty() || e.normText.isBlank()) {
+            return false;
+        }
+        for (String l : labels) {
+            if (l != null && l.length() >= 3 && e.normText.contains(l)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

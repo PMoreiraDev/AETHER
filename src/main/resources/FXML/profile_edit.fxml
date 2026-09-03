@@ -20,6 +20,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextArea?>
@@ -122,7 +123,7 @@
                         <!-- Row 2: Birthday -->
                         <VBox spacing="6">
                             <Label text="Birthday" styleClass="profile-field-label"/>
-                            <TextField fx:id="birthdayField" styleClass="profile-text-field" promptText="D / M / YYYY"/>
+                            <DatePicker fx:id="birthdayField" styleClass="date-picker-glass" promptText="Select a date"/>
                         </VBox>
 
                         <!-- Row 3: Occupation / Roles -->

@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    obsidian_setup.fxml
+    ==================
+    Passo 3 do onboarding: configuração do Obsidian e criação do cofre.
+    Controlador: controller.ObsidianSetupController
+
+    A estrutura acompanha ponto por ponto a dos passos 1 e 2 (profile.fxml
+    e ollama_setup.fxml): o mesmo fundo, o mesmo cartão de vidro com as
+    mesmas dimensões, margens e espaçamentos, a mesma hierarquia de títulos,
+    grupos de "label + controlo" sem caixas intermédias e o mesmo rodapé com
+    o indicador de passos e a navegação.
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import javafx.scene.shape.Line?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
+
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="controller.ObsidianSetupController"
+           styleClass="root-pane">
+
+    <children>
+        <ImageView fx:id="backgroundImageView" preserveRatio="false" smooth="true">
+            <image>
+                <Image url="@../images/background.jpg"/>
+            </image>
+        </ImageView>
+
+        <!-- Cartão central: mesmas dimensões e margens dos passos 1 e 2. -->
+        <VBox alignment="TOP_LEFT" maxWidth="720" maxHeight="620" spacing="20" styleClass="card-perfil">
+            <padding>
+                <Insets top="32" right="36" bottom="28" left="36"/>
+            </padding>
+            <children>
+
+                <!-- Cabeçalho: mesma composição dos passos 1 e 2. -->
+                <VBox spacing="6">
+                    <children>
+                        <TextFlow>
+                            <children>
+                                <Text text="3. " styleClass="titulo-passo-numero"/>
+                                <Text text="Obsidian Setup" styleClass="titulo-passo-texto"/>
+                            </children>
+                        </TextFlow>
+                        <Label text="Connect AETHER to your knowledge base" styleClass="subtitulo-perfil"/>
+                        <Label text="Create an Obsidian vault so AETHER can organize your notes, ideas and knowledge in one place."
+                               styleClass="descricao-perfil" wrapText="true"/>
+                    </children>
+                </VBox>
+
+                <!-- Grupos "label + controlo", no mesmo estilo dos passos anteriores. -->
+                <VBox spacing="14" VBox.vgrow="ALWAYS">
+                    <children>
+
+                        <!-- Estado da instalação do Obsidian -->
+                        <VBox spacing="6">
+                            <children>
+                                <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Label text="Obsidian Installation" styleClass="label-campo"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Circle fx:id="statusDot" radius="4" styleClass="indicador-pendente"/>
+                                        <Label fx:id="statusLabel" text="Checking..." styleClass="status-badge"/>
+                                    </children>
+                                </HBox>
+                                <HBox spacing="14" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Button fx:id="downloadButton" text="Download Obsidian"
+                                                onAction="#handleDownloadObsidian" styleClass="botao-primario"
+                                                visible="false" managed="false"/>
+                                        <Label text="Obsidian is a free local knowledge base. AETHER uses it to store and connect your notes."
+                                               styleClass="descricao-perfil" wrapText="true" HBox.hgrow="ALWAYS"/>
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+
+                        <!-- Criação do cofre -->
+                        <VBox spacing="6">
+                            <children>
+                                <HBox spacing="8" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Label text="Obsidian Vault" styleClass="label-campo"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                    </children>
+                                </HBox>
+                                <HBox spacing="14" alignment="CENTER_LEFT">
+                                    <children>
+                                        <Button fx:id="createVaultButton" text="Create Vault"
+                                                onAction="#handleCreateVault" styleClass="botao-primario"/>
+                                        <Label text="Create a new vault or connect to an existing one."
+                                               styleClass="descricao-perfil" wrapText="true" HBox.hgrow="ALWAYS"/>
+                                    </children>
+                                </HBox>
+                                <Label fx:id="vaultPathLabel" text="" styleClass="descricao-perfil"
+                                       wrapText="true" visible="false" managed="false"/>
+                            </children>
+                        </VBox>
+
+                    </children>
+                </VBox>
+
+                <!-- Rodapé: indicador de passos e navegação, igual aos passos 1 e 2. -->
+                <VBox spacing="14">
+                    <children>
+                        <HBox alignment="CENTER" spacing="16">
+                            <children>
+                                <Label text="1" styleClass="texto-passos"/>
+                                <Line startX="0" endX="40" styleClass="linha-progresso, linha-progresso-ativa"/>
+                                <Label text="2" styleClass="texto-passos"/>
+                                <Line startX="0" endX="40" styleClass="linha-progresso, linha-progresso-ativa"/>
+                                <Label text="3" styleClass="texto-passos, texto-passo-ativo"/>
+                            </children>
+                        </HBox>
+
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Button text="Skip" onAction="#handleSkip" styleClass="link-skip"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="finishButton" text="Finish →" onAction="#handleFinish"
+                                        styleClass="botao-next"/>
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+
+            </children>
+        </VBox>
+    </children>
+</StackPane>

@@ -153,6 +153,8 @@
                                 <Label text="1" styleClass="texto-passos, texto-passo-ativo"/>
                                 <Line startX="0" endX="40" styleClass="linha-progresso, linha-progresso-ativa"/>
                                 <Label text="2" styleClass="texto-passos"/>
+                                <Line startX="0" endX="40" styleClass="linha-progresso, linha-progresso-ativa"/>
+                                <Label text="3" styleClass="texto-passos"/>
                             </children>
                         </HBox>
 

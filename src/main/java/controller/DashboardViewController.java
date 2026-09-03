@@ -2,18 +2,23 @@ package controller;
 
 import java.net.URL;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.ResourceBundle;
 import java.util.logging.Logger;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.shape.Circle;
 import session.UserSession;
+import persistence.VaultManager;
+import domain.entities.Event;
+import domain.entities.Person;
+import domain.entities.Task;
 
 /**
  * Controlador da vista do dashboard ({@code dashboard_view.fxml}), carregada
@@ -41,6 +46,9 @@ public class DashboardViewController implements Initializable {
 
     /** Mês e ano atualmente apresentados no calendário. */
     private YearMonth displayedMonth = YearMonth.now();
+
+    /** Número máximo de itens mostrados nos cartões de resumo (People/Events/Tasks). */
+    private static final int MAX_DASHBOARD_ITEMS = 4;
 
     // ------------------------------------------------------------------
     // FXML
@@ -83,19 +91,49 @@ public class DashboardViewController implements Initializable {
     // ------------------------------------------------------------------
 
     /**
-     * Carrega a lista de pessoas a partir dos dados disponíveis.
-     * <p>
-     * Atualmente não existe repositório de entidades. O perfil do utilizador
-     * já é apresentado no cartão de perfil da sidebar, por isso o cartão
-     * People mostra o estado vazio. Quando houver repositório de pessoas,
-     * substituir o corpo deste método pela leitura da base de dados local.
-     * </p>
+     * Carrega a lista de pessoas a partir do vault, limitada aos mais relevantes
+     * (com mais informação preenchida). Mostra no máximo
+     * {@link #MAX_DASHBOARD_ITEMS} pessoas para o cartão não transbordar a
+     * janela; a contagem total continua a aparecer no badge.
      */
     private void loadPeople() {
-        peopleCountLabel.setText("0");
-        Label empty = new Label("No people yet.");
-        empty.getStyleClass().add("dash-empty-state");
-        peopleListContainer.getChildren().add(empty);
+        peopleListContainer.getChildren().clear();
+        var people = VaultManager.listPeople();
+        peopleCountLabel.setText(String.valueOf(people.size()));
+        if (people.isEmpty()) {
+            Label empty = new Label("No people yet.");
+            empty.getStyleClass().add("dash-empty-state");
+            peopleListContainer.getChildren().add(empty);
+            return;
+        }
+
+        people.stream()
+                .sorted(Comparator.comparingInt(DashboardViewController::personInfoScore).reversed())
+                .limit(MAX_DASHBOARD_ITEMS)
+                .forEach(p -> {
+                    String occupation = p.getOccupation();
+                    String subtitle = (occupation != null && !occupation.isBlank()) ? occupation : "No occupation";
+                    peopleListContainer.getChildren().add(createListRow(p.getName(), subtitle));
+                });
+    }
+
+    /**
+     * Pontuação de "riqueza de informação" de uma pessoa. Não existe um campo
+     * de interações, pelo que ordenamos pelas pessoas com mais dados
+     * preenchidos — estas são as mais úteis para ver no dashboard.
+     *
+     * @param p a pessoa
+     * @return a pontuação (maior = mais informação)
+     */
+    private static int personInfoScore(Person p) {
+        int score = 0;
+        if (p.getName() != null && !p.getName().isBlank()) score++;
+        if (p.getOccupation() != null && !p.getOccupation().isBlank()) score += 2;
+        if (p.getBirthDate() != null) score++;
+        if (p.getAbout() != null) {
+            score += Math.min(p.getAbout().length() / 50, 4);
+        }
+        return score;
     }
 
     // ------------------------------------------------------------------
@@ -103,16 +141,43 @@ public class DashboardViewController implements Initializable {
     // ------------------------------------------------------------------
 
     /**
-     * Carrega a lista de eventos a partir dos dados disponíveis.
-     * <p>
-     * Sem repositório de eventos ainda — mostra estado vazio.
-     * </p>
+     * Carrega a lista de eventos a partir do vault, limitada aos próximos
+     * {@link #MAX_DASHBOARD_ITEMS} eventos futuros (por data de início). Mostra
+     * apenas os mais próximos no tempo para o cartão não transbordar a janela;
+     * a contagem total continua a aparecer no badge.
      */
     private void loadEvents() {
-        eventsCountLabel.setText("0");
-        Label empty = new Label("No events yet.");
-        empty.getStyleClass().add("dash-empty-state");
-        eventsListContainer.getChildren().add(empty);
+        eventsListContainer.getChildren().clear();
+        var events = VaultManager.listEvents();
+        eventsCountLabel.setText(String.valueOf(events.size()));
+        if (events.isEmpty()) {
+            Label empty = new Label("No events yet.");
+            empty.getStyleClass().add("dash-empty-state");
+            eventsListContainer.getChildren().add(empty);
+            return;
+        }
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        LocalDateTime now = LocalDateTime.now();
+
+        // Only future/ongoing events appear in the dashboard summary; past
+        // events are hidden to keep the list focused on what's next.
+        events.stream()
+                .filter(ev -> ev.getStartDateTime() == null || !ev.getStartDateTime().isBefore(now))
+                .sorted(Comparator.comparing(
+                        ev -> ev.getStartDateTime() == null ? LocalDateTime.MAX : ev.getStartDateTime()))
+                .limit(MAX_DASHBOARD_ITEMS)
+                .forEach(ev -> {
+                    String when = ev.getStartDateTime() != null ? ev.getStartDateTime().format(fmt) : "No date";
+                    String loc = ev.getLocation();
+                    String subtitle = (loc != null && !loc.isBlank()) ? when + " · " + loc : when;
+                    eventsListContainer.getChildren().add(createListRow(ev.getTitle(), subtitle));
+                });
+
+        if (eventsListContainer.getChildren().isEmpty()) {
+            Label empty = new Label("No upcoming events.");
+            empty.getStyleClass().add("dash-empty-state");
+            eventsListContainer.getChildren().add(empty);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -120,16 +185,38 @@ public class DashboardViewController implements Initializable {
     // ------------------------------------------------------------------
 
     /**
-     * Carrega a lista de tarefas a partir dos dados disponíveis.
-     * <p>
-     * Sem repositório de tarefas ainda — mostra estado vazio.
-     * </p>
+     * Carrega a lista de tarefas a partir do vault, limitada às
+     * {@link #MAX_DASHBOARD_ITEMS} tarefas mais próximas (por deadline).
+     * Mostra apenas as mais próximas para o cartão não transbordar a janela;
+     * a contagem total continua a aparecer no badge.
      */
     private void loadTasks() {
-        tasksCountLabel.setText("0");
-        Label empty = new Label("No tasks yet.");
-        empty.getStyleClass().add("dash-empty-state");
-        tasksListContainer.getChildren().add(empty);
+        tasksListContainer.getChildren().clear();
+        var tasks = VaultManager.listTasks();
+        tasksCountLabel.setText(String.valueOf(tasks.size()));
+        if (tasks.isEmpty()) {
+            Label empty = new Label("No tasks yet.");
+            empty.getStyleClass().add("dash-empty-state");
+            tasksListContainer.getChildren().add(empty);
+            return;
+        }
+        // Hide completed tasks; show upcoming (or undated) first so the
+        // dashboard stays focused on what needs attention.
+        tasks.stream()
+                .filter(t -> t.getStatus() != domain.entities.TaskStatus.DONE)
+                .sorted(Comparator.comparing(
+                        t -> t.getDeadline() == null ? LocalDateTime.MAX : t.getDeadline()))
+                .limit(MAX_DASHBOARD_ITEMS)
+                .forEach(t -> {
+                    String subtitle = t.getStatus() != null ? t.getStatus().getDisplayName() : "No status";
+                    tasksListContainer.getChildren().add(createListRow(t.getTitle(), subtitle));
+                });
+
+        if (tasksListContainer.getChildren().isEmpty()) {
+            Label empty = new Label("No open tasks.");
+            empty.getStyleClass().add("dash-empty-state");
+            tasksListContainer.getChildren().add(empty);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -143,10 +230,32 @@ public class DashboardViewController implements Initializable {
      * </p>
      */
     private void loadTodaySchedule() {
-        todayCountLabel.setText("0");
-        Label empty = new Label("Nothing scheduled for today.");
-        empty.getStyleClass().add("dash-empty-state");
-        todayScheduleContainer.getChildren().add(empty);
+        todayScheduleContainer.getChildren().clear();
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
+        int count = 0;
+
+        for (Event ev : VaultManager.listEvents()) {
+            if (ev.getStartDateTime() != null && ev.getStartDateTime().toLocalDate().equals(today)) {
+                todayScheduleContainer.getChildren().add(
+                        createListRow(ev.getTitle(), ev.getStartDateTime().format(fmt)));
+                count++;
+            }
+        }
+        for (Task t : VaultManager.listTasks()) {
+            if (t.getDeadline() != null && t.getDeadline().toLocalDate().equals(today)) {
+                todayScheduleContainer.getChildren().add(
+                        createListRow(t.getTitle(), t.getDeadline().format(fmt)));
+                count++;
+            }
+        }
+
+        todayCountLabel.setText(String.valueOf(count));
+        if (count == 0) {
+            Label empty = new Label("Nothing scheduled for today.");
+            empty.getStyleClass().add("dash-empty-state");
+            todayScheduleContainer.getChildren().add(empty);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -177,79 +286,18 @@ public class DashboardViewController implements Initializable {
     // ------------------------------------------------------------------
 
     /**
-     * Renderiza o Context Graph com o utilizador como nó central.
-     * <p>
-     * O nó central é identificado pelo nome do utilizador e o seu conteúdo
-     * vem do contexto de IA guardado no perfil. Se o contexto estiver vazio,
-     * mostra um estado vazio a convidar o utilizador a preenchê-lo.
-     * </p>
+     * Context Graph — desligado por agora. O desenho do grafo estava a gerar
+     * bugs visuais, por isso a área mantém-se no layout mas fica em branco.
+     * Não removemos o cartão para não alterar a identidade visual do AETHER.
+     * Quando o grafo estiver estável, voltar a chamá-lo aqui.
      */
     private void renderContextGraph() {
         contextGraphContainer.getChildren().clear();
-
-        UserSession session = UserSession.getInstance();
-        var profile = session.getUserProfile();
-
-        String fullName = profile.getFullName();
-        if (fullName == null || fullName.isBlank()) {
-            fullName = "AETHER User";
-        }
-
-        String displayName = profile.getPreferredName();
-        if (displayName == null || displayName.isBlank()) {
-            displayName = fullName;
-        }
-
-        String displaySummary = profile.getDisplaySummary();
-        boolean hasSummary = displaySummary != null && !displaySummary.isBlank();
-
-        // Nó central do utilizador
-        VBox userNode = new VBox(4);
-        userNode.getStyleClass().add("dash-graph-user-node");
-        userNode.setAlignment(javafx.geometry.Pos.CENTER);
-
-        Circle userCircle = new Circle(30);
-        userCircle.getStyleClass().add("dash-graph-user-circle");
-
-        Label userInitials = new Label(extractInitials(fullName));
-        userInitials.getStyleClass().add("dash-graph-user-initials");
-
-        StackPane avatarPane = new StackPane(userCircle, userInitials);
-        avatarPane.getStyleClass().add("dash-graph-user-avatar");
-
-        Label userNameLabel = new Label(displayName);
-        userNameLabel.getStyleClass().add("dash-graph-user-name");
-
-        Label contextLabel;
-        if (hasSummary) {
-            // No Context Graph, mostra apenas o resumo principal do utilizador.
-            // Os dados completos continuam internamente disponíveis para a IA
-            // através do ContextManager, mas não são exibidos no gráfico.
-            String preview = displaySummary.trim();
-            if (preview.length() > 120) {
-                preview = preview.substring(0, 120).trim() + "...";
-            }
-            contextLabel = new Label(preview);
-            contextLabel.getStyleClass().add("dash-graph-context-preview");
-        } else {
-            contextLabel = new Label("Your context is empty. Tell AETHER about yourself in Profile.");
-            contextLabel.getStyleClass().add("dash-graph-empty-context");
-        }
-
-        contextLabel.setWrapText(true);
-        contextLabel.setMaxWidth(280);
-        contextLabel.setAlignment(javafx.geometry.Pos.CENTER);
-
-        userNode.getChildren().addAll(avatarPane, userNameLabel, contextLabel);
-
-        // O nó central representa a Central Context Note do utilizador — a
-        // mesma nota editável em Profile. Clicar nele abre essa mesma vista,
-        // em vez de apenas selecionar o nó.
-        userNode.getStyleClass().add("dash-graph-user-node-clickable");
-        userNode.setCursor(javafx.scene.Cursor.HAND);
-        userNode.setOnMouseClicked(e -> openCentralContextNote());
-
-        contextGraphContainer.getChildren().add(userNode);
+        Label placeholder = new Label("Context Graph coming soon");
+        placeholder.getStyleClass().add("dash-graph-placeholder-text");
+        Label hint = new Label("Add people, events, tasks and notes to see connections here later.");
+        hint.getStyleClass().add("dash-graph-hint");
+        contextGraphContainer.getChildren().addAll(placeholder, hint);
     }
 
     /**
@@ -272,10 +320,14 @@ public class DashboardViewController implements Initializable {
 
     /**
      * Extrai as iniciais de um nome completo.
+     * <p>
+     * Mantido para uso futuro quando o Context Graph voltar a ser desenhado.
+     * </p>
      *
      * @param fullName o nome completo do utilizador
      * @return as iniciais (1 a 2 caracteres), maiúsculas
      */
+    @SuppressWarnings("unused")
     private String extractInitials(String fullName) {
         String[] parts = fullName.trim().split("\\s+");
         if (parts.length == 0 || parts[0].isEmpty()) {
@@ -387,4 +439,5 @@ public class DashboardViewController implements Initializable {
         displayedMonth = displayedMonth.plusMonths(1);
         renderCalendar();
     }
+
 }

@@ -17,6 +17,7 @@
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.VBox?>
 
 <HBox xmlns="http://javafx.com/javafx/21"
@@ -43,10 +44,6 @@
                     <HBox spacing="8" alignment="CENTER_LEFT">
                         <children>
                             <Label text="Context Graph" styleClass="dash-card-title"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Button text="ℹ" styleClass="dash-card-icon-btn"/>
-                            <Button text="⚙" styleClass="dash-card-icon-btn"/>
-                            <Button text="⛶" styleClass="dash-card-icon-btn"/>
                         </children>
                     </HBox>
 

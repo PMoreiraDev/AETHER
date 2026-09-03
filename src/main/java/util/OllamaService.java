@@ -72,12 +72,64 @@ public final class OllamaService {
      * @return o caminho absoluto do executável, ou {@code null} se não for encontrado
      */
     public static String findOllamaExecutable() {
+        // Honour a user-configured override (executable or containing folder).
+        String override = session.UserSession.getInstance().getAppSettings().getOllamaPathOverride();
+        if (override != null && !override.isBlank()) {
+            String resolved = resolveOllamaFromOverride(override);
+            if (resolved != null) {
+                return resolved;
+            }
+            LOGGER.fine("Ollama override inválido, a pesquisar caminhos conhecidos.");
+        }
+
         for (String path : buildCandidatePaths()) {
             if (path != null && new File(path).canExecute()) {
                 return path;
             }
         }
         LOGGER.fine("Executável do Ollama não encontrado nos caminhos conhecidos.");
+        return null;
+    }
+
+    /**
+     * Validates whether a given path resolves to a usable Ollama executable,
+     * WITHOUT falling back to auto-detected paths. Used by the Settings screen
+     * to tell the user whether their chosen override is valid.
+     *
+     * @param candidate the path to validate (executable or containing folder)
+     * @return {@code true} if the path resolves to an executable Ollama binary
+     */
+    public static boolean isValidOllamaPath(String candidate) {
+        return resolveOllamaFromOverride(candidate) != null;
+    }
+
+    /**
+     * Resolves the Ollama executable from a user-provided override. Accepts
+     * either a direct executable path or a folder containing the
+     * {@code ollama} / {@code ollama.exe} binary.
+     *
+     * @param override the path given by the user
+     * @return the resolved executable path, or {@code null} if invalid
+     */
+    private static String resolveOllamaFromOverride(String override) {
+        if (override == null || override.isBlank()) {
+            return null;
+        }
+        java.nio.file.Path p = java.nio.file.Paths.get(override).toAbsolutePath().normalize();
+
+        // Direct executable path.
+        if (java.nio.file.Files.isRegularFile(p) && p.toFile().canExecute()) {
+            return p.toString();
+        }
+
+        // Folder containing the ollama binary.
+        if (java.nio.file.Files.isDirectory(p)) {
+            String binaryName = SystemInfo.isWindows() ? "ollama.exe" : "ollama";
+            java.nio.file.Path binary = p.resolve(binaryName);
+            if (java.nio.file.Files.isRegularFile(binary) && binary.toFile().canExecute()) {
+                return binary.toString();
+            }
+        }
         return null;
     }
 
@@ -907,6 +959,189 @@ public final class OllamaService {
             LOGGER.log(Level.WARNING, "Falha ao comunicar com o Ollama (streaming).", e);
             return false;
         }
+    }
+
+    /**
+     * Uma mensagem de conversa com papel (system/user/assistant) e conteúdo.
+     * Usada para enviar o histórico da conversa ao endpoint /api/chat do
+     * Ollama, que suporta memória entre turnos (ao contrário do /api/generate,
+     * que trata cada mensagem isoladamente).
+     */
+    public static final class ChatMessage {
+        private final String role;
+        private final String content;
+
+        public ChatMessage(String role, String content) {
+            this.role = role;
+            this.content = content;
+        }
+
+        public String getRole() {
+            return role;
+        }
+
+        public String getContent() {
+            return content;
+        }
+    }
+
+    /**
+     * Constrói o objeto JSON para uma mensagem de chat (role + content),
+     * já com o conteúdo escapado.
+     */
+    private static String toJsonMessage(String role, String content) {
+        return "{\"role\":\"" + escapeJson(role)
+                + "\",\"content\":\"" + escapeJson(content) + "\"}";
+    }
+
+    /**
+     * Constrói o corpo JSON para um pedido ao endpoint /api/chat do Ollama.
+     * <p>
+     * O prompt de sistema (se presente) é a primeira mensagem
+     * ({@code role=system}), seguido do histórico de turnos user/assistant na
+     * ordem correta. Visível para testes unitários (sem rede).
+     *
+     * @param modelId  identificador do modelo
+     * @param messages histórico (user/assistant)
+     * @param system   prompt de sistema; pode ser {@code null} ou vazio
+     * @return o JSON do pedido
+     */
+    public static String buildChatRequestBody(String modelId, List<ChatMessage> messages,
+                                       String system) {
+        StringBuilder msgs = new StringBuilder();
+        boolean first = true;
+        if (system != null && !system.isBlank()) {
+            msgs.append(toJsonMessage("system", system));
+            first = false;
+        }
+        for (ChatMessage m : messages) {
+            if (m == null || m.getContent() == null || m.getContent().isBlank()) {
+                continue;
+            }
+            if (!first) {
+                msgs.append(",");
+            }
+            msgs.append(toJsonMessage(m.getRole(), m.getContent()));
+            first = false;
+        }
+        return "{\"model\":\"" + escapeJson(modelId) + "\","
+                + "\"messages\":[" + msgs + "],"
+                + "\"stream\":true,"
+                + "\"keep_alive\":\"" + KEEP_ALIVE + "\"}";
+    }
+
+    /**
+     * Envia uma conversa completa (com histórico) ao Ollama via /api/chat e
+     * faz streaming dos tokens da resposta.
+     * <p>
+     * Ao contrário do {@link #chatStream(String, String, String, Consumer)}
+     * (que usa /api/generate e trata cada mensagem isoladamente), este método
+     * envia o histórico completo de turnos user/assistant, pelo que a IA
+     * consegue recordar o que foi dito antes na mesma conversa.
+     * <p>
+     * O prompt de sistema é enviado como a primeira mensagem com
+     * {@code role=system}, seguido das mensagens de histórico. O histórico é
+     * da responsabilidade do chamador (deve ser limitado a um número razoável
+     * de turnos para não inflar o contexto).
+     *
+     * @param modelId  identificador do modelo Ollama
+     * @param messages histórico da conversa (user/assistant), sem o system
+     * @param system   prompt de sistema (instruções + contexto); pode ser
+     *                 {@code null} ou vazio
+     * @param onToken  callback chamado para cada token recebido
+     * @return {@code true} se foi recebida pelo menos alguma resposta
+     */
+    public static boolean chatStream(String modelId, List<ChatMessage> messages,
+                                     String system, Consumer<String> onToken) {
+        if (modelId == null || modelId.isBlank()
+                || messages == null || messages.isEmpty()) {
+            return false;
+        }
+        if (!ensureServerRunning()) {
+            LOGGER.warning("Não foi possível contactar o modelo: o servidor do Ollama não está disponível.");
+            return false;
+        }
+
+        try {
+            String body = buildChatRequestBody(modelId, messages, system);
+
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(10))
+                    .build();
+
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/chat"))
+                    .timeout(java.time.Duration.ofMinutes(5))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+
+            java.net.http.HttpResponse<Stream<String>> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofLines());
+
+            if (response.statusCode() != 200) {
+                LOGGER.warning(() -> "Ollama API (chat) devolveu HTTP " + response.statusCode());
+                return false;
+            }
+
+            boolean[] receivedAny = {false};
+            try (Stream<String> lines = response.body()) {
+                lines.forEach(line -> {
+                    if (line == null || line.isBlank()) {
+                        return;
+                    }
+                    String chunk = extractChatContent(line);
+                    if (chunk != null && !chunk.isEmpty()) {
+                        receivedAny[0] = true;
+                        onToken.accept(chunk);
+                    }
+                });
+            }
+            return receivedAny[0];
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Falha ao comunicar com o Ollama (chat).", e);
+            return false;
+        }
+    }
+
+    /**
+     * Extrai o conteúdo ({@code message.content}) de uma linha NDJSON do
+     * endpoint /api/chat. Cada linha tem o formato:
+     * <pre>{"message":{"role":"assistant","content":"..."},"done":false}</pre>
+     *
+     * @param json uma linha NDJSON do /api/chat
+     * @return o texto do conteúdo, ou {@code null} se não existir
+     */
+    private static String extractChatContent(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        String key = "\"content\":\"";
+        int idx = json.indexOf(key);
+        if (idx < 0) {
+            return null;
+        }
+        int start = idx + key.length();
+        StringBuilder sb = new StringBuilder();
+        for (int i = start; i < json.length(); i++) {
+            char c = json.charAt(i);
+            if (c == '\\' && i + 1 < json.length()) {
+                char next = json.charAt(i + 1);
+                switch (next) {
+                    case 'n' -> sb.append('\n');
+                    case 't' -> sb.append('\t');
+                    case '"' -> sb.append('"');
+                    case '\\' -> sb.append('\\');
+                    default -> sb.append(next);
+                }
+                i++;
+            } else if (c == '"') {
+                break;
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     /**

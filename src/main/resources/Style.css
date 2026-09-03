@@ -162,9 +162,11 @@
     -fx-text-fill: #64748b;
 }
 
-/* Campos de Texto Simples (TextField) */
+/* Campos de Texto Simples (TextField) — vidro escuro com gradiente. */
 .campo-texto {
-    -fx-background-color: rgba(10, 15, 26, 0.45);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.55) 0%,
+            rgba(10, 15, 26, 0.75) 100%);
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
     -fx-border-color: rgba(255, 255, 255, 0.14);
@@ -175,8 +177,104 @@
 }
 
 .campo-texto:focused {
-    -fx-border-color: rgba(129, 140, 248, 0.6);
-    -fx-background-color: rgba(10, 15, 26, 0.65);
+    -fx-border-color: rgba(34, 211, 238, 0.6);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.70) 0%,
+            rgba(10, 15, 26, 0.90) 100%);
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.12), 10, 0, 0, 0);
+}
+
+/* DatePicker — mesmo vidro escuro dos campos de texto, para os campos de
+   data (Add Event, Add Task, Add Person, Edit Profile, ...) deixarem de
+   obrigar a escrever a data à mão e passarem a abrir um calendário. */
+.date-picker-glass {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.55) 0%,
+            rgba(10, 15, 26, 0.75) 100%);
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1px;
+}
+.date-picker-glass > .text-field {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-text-fill: #f8fafc;
+    -fx-prompt-text-fill: #64748b;
+    -fx-padding: 10px 0 10px 14px;
+}
+.date-picker-glass > .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 12px 0 0;
+}
+.date-picker-glass > .arrow-button > .arrow {
+    -fx-background-color: #94a3b8;
+}
+.date-picker-glass:focused {
+    -fx-border-color: rgba(34, 211, 238, 0.6);
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.12), 10, 0, 0, 0);
+}
+
+/* Popup do calendário do DatePicker.
+   [IMPORTANTE] Tal como o popup da ComboBox (ver ".combo-box-popup" mais
+   abaixo), este popup vive na sua própria janela, por isso tem de ser
+   estilizado com seletores de topo — nunca aninhado dentro de
+   ".date-picker-glass ..." (essas regras nunca chegariam a aplicar-se). */
+.date-picker-popup {
+    -fx-background-color: #0f1729;
+    -fx-background-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 20, 0, 0, 6);
+}
+.date-picker-popup .month-year-pane {
+    -fx-background-color: rgba(99, 102, 241, 0.18);
+    -fx-background-radius: 10px 10px 0 0;
+}
+.date-picker-popup .spinner .button,
+.date-picker-popup .spinner .label,
+.date-picker-popup .month-year-pane .label {
+    -fx-text-fill: #f8fafc;
+    -fx-font-weight: bold;
+}
+.date-picker-popup .spinner .button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-background-radius: 6px;
+}
+.date-picker-popup .spinner > .button > .left-arrow,
+.date-picker-popup .spinner > .button > .right-arrow {
+    -fx-background-color: #f8fafc;
+}
+.date-picker-popup .calendar-grid {
+    -fx-background-color: #0f1729;
+}
+.date-picker-popup .day-name-cell {
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 11px;
+}
+.date-picker-popup .day-cell {
+    -fx-background-color: #0f1729;
+    -fx-text-fill: #e2e8f0;
+    -fx-background-radius: 999px;
+}
+.date-picker-popup .day-cell:hover {
+    -fx-background-color: rgba(129, 140, 248, 0.3);
+    -fx-background-radius: 999px;
+}
+.date-picker-popup .day-cell:selected {
+    -fx-background-color: #6366f1;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 999px;
+}
+.date-picker-popup .today {
+    -fx-border-color: rgba(34, 211, 238, 0.6);
+    -fx-border-width: 1px;
+    -fx-background-radius: 999px;
+}
+.date-picker-popup .day-cell:next-month,
+.date-picker-popup .day-cell:previous-month {
+    -fx-text-fill: #475569;
 }
 
 /* Configuração e Remoção do Fundo Branco da TextArea
@@ -203,7 +301,9 @@
 }
 
 .area-texto .content {
-    -fx-background-color: rgba(10, 15, 26, 0.45);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.55) 0%,
+            rgba(10, 15, 26, 0.75) 100%);
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
     -fx-border-color: rgba(255, 255, 255, 0.14);
@@ -212,8 +312,10 @@
 }
 
 .area-texto:focused .content {
-    -fx-border-color: rgba(129, 140, 248, 0.6);
-    -fx-background-color: rgba(10, 15, 26, 0.65);
+    -fx-border-color: rgba(34, 211, 238, 0.6);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.70) 0%,
+            rgba(10, 15, 26, 0.90) 100%);
 }
 
 .area-texto .text {
@@ -329,13 +431,19 @@
    4. Modal Customizada AETHER
    --------------------------------------------------------------------- */
 .custom-dialog-pane {
-    -fx-background-color: #0f172a;
-    -fx-border-color: rgba(255, 255, 255, 0.15);
+    /* Vidro fosco coerente com o modal de perfil: gradiente vertical
+       com uma linha mais clara no topo (realce de borda de vidro). */
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(148, 163, 184, 0.10) 0%,
+            rgba(20, 30, 48, 0.92) 4%,
+            rgba(7, 11, 20, 0.94) 55%,
+            rgba(4, 7, 14, 0.96) 100%);
+    -fx-border-color: rgba(34, 211, 238, 0.22);
     -fx-border-width: 1px;
     -fx-border-radius: 16px;
     -fx-background-radius: 16px;
     -fx-padding: 24px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.75), 40, 0, 0, 15);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.7), 48, 0.25, 0, 16);
 }
 
 .custom-dialog-pane .button-bar {
@@ -344,10 +452,10 @@
 
 /* Botão Secundário (Cancel) */
 .custom-dialog-pane .button-bar .button {
-    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-background-color: rgba(255, 255, 255, 0.06);
     -fx-background-radius: 999px;
     -fx-border-radius: 999px;
-    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-color: rgba(255, 255, 255, 0.14);
     -fx-text-fill: #cbd5e1;
     -fx-font-size: 13px;
     -fx-font-weight: 600;
@@ -356,19 +464,36 @@
 }
 
 .custom-dialog-pane .button-bar .button:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.15);
+    -fx-background-color: rgba(34, 211, 238, 0.14);
+    -fx-border-color: rgba(34, 211, 238, 0.5);
     -fx-text-fill: #ffffff;
 }
 
 /* Botão Primário (Add Role / OK) */
 .custom-dialog-pane .button-bar .button:default {
-    -fx-background-color: #6366f1;
-    -fx-border-color: transparent;
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            #818cf8 0%, #6366f1 100%);
+    -fx-border-color: rgba(129, 140, 248, 0.5);
     -fx-text-fill: #ffffff;
 }
 
 .custom-dialog-pane .button-bar .button:default:hover {
-    -fx-background-color: #4f46e5;
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            #6366f1 0%, #4f46e5 100%);
+}
+
+/* Conteúdo e cabeçalho transparentes para o fundo escuro do painel aparecer. */
+.custom-dialog-pane > .content {
+    -fx-background-color: transparent;
+    -fx-padding: 4 0 8 0;
+}
+.custom-dialog-pane > .header {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 8 0;
+}
+.custom-dialog-pane > .scroll-pane,
+.custom-dialog-pane > .scroll-pane .viewport {
+    -fx-background-color: transparent;
 }
 
 
@@ -618,6 +743,12 @@
 .botao-perigo:disabled {
     -fx-opacity: 0.35;
     -fx-cursor: default;
+}
+
+/* Botão compacto para ações dentro de cartões (ex.: Delete). */
+.button-small {
+    -fx-font-size: 11.5px;
+    -fx-padding: 4 12;
 }
 
 /* ===============================================
@@ -1301,6 +1432,37 @@
     -fx-font-weight: 600;
 }
 
+/* Botão "Nova conversa" — ghost button coerente com o header escuro do chat:
+   fundo translúcido, contorno subtil e accent cyan no hover/pressed. */
+.ai-new-chat-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 8px;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-text-fill: #cbd5e1;
+    -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+    -fx-padding: 6px 12px;
+    -fx-cursor: hand;
+    -fx-content-display: left;
+    -fx-graphic-text-gap: 6px;
+}
+.ai-new-chat-btn:hover {
+    -fx-background-color: rgba(34, 211, 238, 0.10);
+    -fx-border-color: rgba(34, 211, 238, 0.45);
+    -fx-text-fill: #e2f7fb;
+}
+.ai-new-chat-btn:pressed {
+    -fx-background-color: rgba(34, 211, 238, 0.18);
+    -fx-border-color: rgba(34, 211, 238, 0.7);
+}
+.ai-new-chat-btn:disabled {
+    -fx-opacity: 0.4;
+    -fx-cursor: default;
+}
+
 /* Área de mensagens
    O ScrollPane do JavaFX desenha o seu ".viewport" interno com fundo branco
    por omissão; estilizar apenas ".ai-chat-scroll" não chega (o mesmo problema
@@ -1390,7 +1552,7 @@
     -fx-prompt-text-fill: #475569;
     -fx-padding: 10 14;
 }
-.ai-input-field:focus {
+.ai-input-field:focused {
     -fx-border-color: rgba(34, 211, 238, 0.4);
     -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.1), 6, 0, 0, 0);
 }
@@ -1957,24 +2119,30 @@
 
 /* Root modal container */
 .profile-modal {
-    -fx-background-color: rgba(7, 11, 20, 0.97);
-    -fx-border-color: rgba(34, 211, 238, 0.18);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(20, 30, 48, 0.92) 0%,
+            rgba(7, 11, 20, 0.94) 55%,
+            rgba(4, 7, 14, 0.96) 100%);
+    -fx-border-color: rgba(34, 211, 238, 0.22);
     -fx-border-width: 1px;
     -fx-border-radius: 20px;
     -fx-background-radius: 20px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.6), 40, 0, 0, 12);
+    /* Realce superior de 1px para o efeito de "borda de vidro". */
+    -fx-background-insets: 0;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.65), 48, 0.25, 0, 16);
     -fx-padding: 0;
     -fx-spacing: 0;
     -fx-pref-width: 680px;
     -fx-max-width: 760px;
     -fx-max-height: 760px;
 }
-
-/* Header */
+/* Camada de realce superior: uma linha mais clara no topo do vidro. */
 .profile-modal-header {
-    -fx-background-color: transparent;
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(255, 255, 255, 0.06) 0%,
+            rgba(255, 255, 255, 0.0) 60%);
     -fx-background-radius: 20px 20px 0 0;
-    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.06) transparent;
+    -fx-border-color: transparent transparent rgba(255, 255, 255, 0.08) transparent;
     -fx-border-width: 0 0 1px 0;
 }
 .profile-modal-header-icon {
@@ -2025,13 +2193,16 @@
     -fx-background-color: transparent;
 }
 
-/* Profile Photo Card (left column) */
+/* Profile Photo Card (left column) — vidro fosco com gradiente e realce. */
 .profile-photo-card {
-    -fx-background-color: rgba(13, 25, 43, 0.60);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(30, 41, 59, 0.55) 0%,
+            rgba(13, 25, 43, 0.62) 100%);
     -fx-background-radius: 16px;
-    -fx-border-color: rgba(34, 211, 238, 0.12);
+    -fx-border-color: rgba(34, 211, 238, 0.16);
     -fx-border-radius: 16px;
     -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 16, 0.2, 0, 6);
     -fx-min-width: 220px;
     -fx-max-width: 240px;
 }
@@ -2129,11 +2300,14 @@
 
 /* Personal Info section (right column) */
 .profile-info-section {
-    -fx-background-color: rgba(13, 25, 43, 0.50);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(30, 41, 59, 0.45) 0%,
+            rgba(13, 25, 43, 0.55) 100%);
     -fx-background-radius: 16px;
-    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-color: rgba(255, 255, 255, 0.10);
     -fx-border-radius: 16px;
     -fx-border-width: 1px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.30), 16, 0.2, 0, 6);
     -fx-hgap: 12;
 }
 
@@ -2145,9 +2319,11 @@
     -fx-font-weight: 600;
 }
 
-/* Text fields */
+/* Text fields — vidro escuro com leve profundidade. */
 .profile-text-field {
-    -fx-background-color: rgba(10, 15, 26, 0.85);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.70) 0%,
+            rgba(10, 15, 26, 0.88) 100%);
     -fx-background-radius: 10px;
     -fx-border-color: rgba(255, 255, 255, 0.12);
     -fx-border-radius: 10px;
@@ -2161,13 +2337,17 @@
 }
 .profile-text-field:focused {
     -fx-border-color: rgba(34, 211, 238, 0.6);
-    -fx-background-color: rgba(10, 15, 26, 0.95);
-    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.1), 8, 0, 0, 0);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.80) 0%,
+            rgba(10, 15, 26, 0.98) 100%);
+    -fx-effect: dropshadow(gaussian, rgba(34, 211, 238, 0.12), 10, 0, 0, 0);
 }
 
 /* Text areas */
 .profile-text-area {
-    -fx-background-color: rgba(10, 15, 26, 0.85);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.70) 0%,
+            rgba(10, 15, 26, 0.88) 100%);
     -fx-background-radius: 10px;
     -fx-border-color: rgba(255, 255, 255, 0.12);
     -fx-border-radius: 10px;
@@ -2177,22 +2357,28 @@
     -fx-font-family: "Helvetica Neue", "Segoe UI", Arial, sans-serif;
     -fx-font-size: 13px;
     -fx-padding: 10 14;
-    -fx-control-inner-background: rgba(10, 15, 26, 0.85);
+    -fx-control-inner-background: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.70) 0%,
+            rgba(10, 15, 26, 0.88) 100%);
     -fx-min-height: 80px;
 }
 .profile-text-area:focused {
     -fx-border-color: rgba(34, 211, 238, 0.6);
-    -fx-background-color: rgba(10, 15, 26, 0.95);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(10, 15, 26, 0.80) 0%,
+            rgba(10, 15, 26, 0.98) 100%);
 }
 
 /* AI Information Card */
 .ai-info-card {
-    -fx-background-color: rgba(13, 25, 43, 0.70);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(30, 27, 75, 0.55) 0%,
+            rgba(13, 25, 43, 0.70) 100%);
     -fx-background-radius: 14px;
-    -fx-border-color: rgba(99, 102, 241, 0.25);
+    -fx-border-color: rgba(99, 102, 241, 0.28);
     -fx-border-radius: 14px;
     -fx-border-width: 1px;
-    -fx-effect: dropshadow(gaussian, rgba(99, 102, 241, 0.08), 12, 0, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(99, 102, 241, 0.12), 16, 0.2, 0, 6);
 }
 .ai-info-icon {
     -fx-font-size: 14px;
@@ -2247,4 +2433,110 @@
 .profile-save-button:hover {
     -fx-background-color: #818cf8;
     -fx-effect: dropshadow(gaussian, rgba(129, 140, 248, 0.5), 16, 0, 0, 0);
+}
+
+/* ---------------------------------------------------------------------
+   GRAPH ELEMENTS (Phase 7)
+   --------------------------------------------------------------------- */
+
+.dash-graph-entity-circle {
+    -fx-fill: #6366f1;
+    -fx-stroke: #818cf8;
+    -fx-stroke-width: 1.5;
+    -fx-effect: dropshadow(gaussian, rgba(99, 102, 241, 0.3), 8, 0.7, 0, 0);
+}
+
+.dash-graph-entity-initials {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+}
+
+.dash-graph-entity-name {
+    -fx-font-size: 11px;
+    -fx-text-fill: #e2e8f0;
+}
+
+/* ---------------------------------------------------------------------
+   QUICK NOTE (Phase 4)
+   --------------------------------------------------------------------- */
+
+.dash-quick-note {
+    -fx-background-color: rgba(10, 15, 26, 0.45);
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.14);
+    -fx-text-fill: #f8fafc;
+    -fx-prompt-text-fill: #64748b;
+    -fx-padding: 10px 14px;
+    -fx-min-height: 60px;
+}
+
+.dash-quick-note:focused {
+    -fx-border-color: rgba(129, 140, 248, 0.6);
+    -fx-background-color: rgba(10, 15, 26, 0.65);
+}
+
+/* ---------------------------------------------------------------------
+   OBSIDIAN SETUP (Phase 1)
+   --------------------------------------------------------------------- */
+
+.botao-primario {
+    -fx-background-color: #22d3ee;
+    -fx-background-radius: 10px;
+    -fx-text-fill: #050811;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 20px;
+    -fx-cursor: hand;
+}
+
+.botao-primario:hover {
+    -fx-background-color: #67e8f9;
+}
+
+.botao-primario:disabled {
+    -fx-background-color: #1e3a4f;
+    -fx-text-fill: #64748b;
+}
+
+.link-skip {
+    -fx-background-color: transparent;
+    -fx-text-fill: #94a3b8;
+    -fx-cursor: hand;
+    -fx-padding: 8px 16px;
+}
+
+.link-skip:hover {
+    -fx-text-fill: #e2e8f0;
+}
+
+/* ---------------------------------------------------------------------
+   ENTITY CARDS (Phase 5)
+   --------------------------------------------------------------------- */
+
+.settings-content {
+    -fx-background-color: transparent;
+}
+
+.settings-header {
+    -fx-background-color: rgba(18, 24, 38, 0.48);
+    -fx-background-radius: 12px;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1px;
+    -fx-border-radius: 12px;
+    -fx-padding: 16px 20px;
+}
+
+.settings-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f8fafc;
+}
+
+.settings-scroll {
+    -fx-background-color: transparent;
+    -fx-background-radius: 12px;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1px;
+    -fx-border-radius: 12px;
 }

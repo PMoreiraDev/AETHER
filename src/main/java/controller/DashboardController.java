@@ -3,6 +3,7 @@ package controller;
 import java.net.URL;
 import java.util.ResourceBundle;
 import java.util.logging.Logger;
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -14,7 +15,9 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import session.UserSession;
+import util.AetherDialogs;
 import util.AvatarImages;
+import util.NoteService;
 import util.OllamaService;
 import util.StyleUtils;
 
@@ -73,6 +76,11 @@ public class DashboardController implements Initializable {
     private static final String AETHER_AI_VIEW = "/FXML/aether_ai.fxml";
     private static final String SETTINGS_VIEW = "/FXML/settings.fxml";
     private static final String PROFILE_VIEW = "/FXML/profile_view.fxml";
+    private static final String PEOPLE_VIEW = "/FXML/people_view.fxml";
+    private static final String PROJECTS_VIEW = "/FXML/projects_view.fxml";
+    private static final String EVENTS_VIEW = "/FXML/events_view.fxml";
+    private static final String TASKS_VIEW = "/FXML/tasks_view.fxml";
+    private static final String NOTES_VIEW = "/FXML/notes_view.fxml";
 
     // ------------------------------------------------------------------
     // FXML — Shell
@@ -91,13 +99,17 @@ public class DashboardController implements Initializable {
     /** Botões de navegação da sidebar, para gestão do estado ativo. */
     @FXML private Button navDashboard;
     @FXML private Button navAetherAI;
-    @FXML private Button navCalendar;
     @FXML private Button navPeople;
+    @FXML private Button navProjects;
     @FXML private Button navEvents;
     @FXML private Button navTasks;
     @FXML private Button navNotes;
     @FXML private Button navSettings;
     @FXML private VBox userProfileCard;
+
+    /** Última vista carregada, para poder refrescá-la após criar uma nota. */
+    private String lastViewPath;
+    private Button lastNavButton;
 
     // ------------------------------------------------------------------
     // Inicialização
@@ -305,10 +317,22 @@ public class DashboardController implements Initializable {
             javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(fxmlUrl);
             var view = (javafx.scene.Node) loader.load();
             contentArea.getChildren().setAll(view);
+            this.lastViewPath = fxmlPath;
+            this.lastNavButton = navButton;
             setActiveNav(navButton);
             refreshModelLabel(); // reflete imediatamente trocas de modelo feitas em Settings
         } catch (Exception e) {
             LOGGER.severe(() -> "Erro ao carregar vista " + fxmlPath + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Recarrega a vista atualmente visível, para refletir dados novos
+     * (ex.: após guardar uma nota). Não bloqueia o fio da interface.
+     */
+    private void reloadCurrentView() {
+        if (lastViewPath != null) {
+            loadView(lastViewPath, lastNavButton);
         }
     }
 
@@ -319,8 +343,8 @@ public class DashboardController implements Initializable {
      */
     private void setActiveNav(Button active) {
         String activeClass = "dash-nav-item-active";
-        var buttons = java.util.List.of(navDashboard, navAetherAI, navCalendar,
-                navPeople, navEvents, navTasks, navNotes, navSettings);
+        var buttons = java.util.List.of(navDashboard, navAetherAI,
+                navPeople, navProjects, navEvents, navTasks, navNotes, navSettings);
 
         for (Button btn : buttons) {
             if (btn == null) continue;
@@ -372,43 +396,43 @@ public class DashboardController implements Initializable {
     @FXML private void handleNavAetherAI() { showAetherAIView(); }
 
     /**
-     * Handler do botão Calendar na sidebar.
-     */
-    @FXML private void handleNavCalendar() {
-        showComingSoon("Calendar");
-        setActiveNav(navCalendar);
-    }
-
-    /**
      * Handler do botão People na sidebar.
      */
     @FXML private void handleNavPeople() {
-        showComingSoon("People");
-        setActiveNav(navPeople);
+        loadView(PEOPLE_VIEW, navPeople);
+        rightArea.getChildren().clear();
+    }
+
+    /**
+     * Handler do botão Projects na sidebar.
+     */
+    @FXML private void handleNavProjects() {
+        loadView(PROJECTS_VIEW, navProjects);
+        rightArea.getChildren().clear();
     }
 
     /**
      * Handler do botão Events na sidebar.
      */
     @FXML private void handleNavEvents() {
-        showComingSoon("Events");
-        setActiveNav(navEvents);
+        loadView(EVENTS_VIEW, navEvents);
+        rightArea.getChildren().clear();
     }
 
     /**
      * Handler do botão Tasks na sidebar.
      */
     @FXML private void handleNavTasks() {
-        showComingSoon("Tasks");
-        setActiveNav(navTasks);
+        loadView(TASKS_VIEW, navTasks);
+        rightArea.getChildren().clear();
     }
 
     /**
      * Handler do botão Notes na sidebar.
      */
     @FXML private void handleNavNotes() {
-        showComingSoon("Notes");
-        setActiveNav(navNotes);
+        loadView(NOTES_VIEW, navNotes);
+        rightArea.getChildren().clear();
     }
 
     /**
@@ -451,9 +475,32 @@ public class DashboardController implements Initializable {
 
     /**
      * Handler do botão "+ Add note" no header.
+     * <p>
+     * Abre o modal de nota partilhado ({@link AetherDialogs#showAddNoteDialog()}),
+     * persiste a nota e processa-a em segundo plano através do {@link NoteService}
+     * (cria pessoas/projetos em falta e adiciona wikilinks), e depois refresca a
+     * vista atual para mostrar os dados novos.
+     * </p>
      */
     @FXML private void handleAddNote() {
-        LOGGER.info("Action: Add note");
+        AetherDialogs.showAddNoteDialog().ifPresent(text -> {
+            Task<String> task = new Task<>() {
+                @Override
+                protected String call() {
+                    return NoteService.processAndPersist(text);
+                }
+            };
+            task.setOnSucceeded(e -> Platform.runLater(() -> {
+                LOGGER.info(() -> "Note saved: " + task.getValue());
+                reloadCurrentView();
+            }));
+            task.setOnFailed(e -> Platform.runLater(() ->
+                    LOGGER.severe(() -> "Note processing failed: "
+                            + (task.getException() != null ? task.getException().getMessage() : "unknown"))));
+            Thread t = new Thread(task, "aether-note-save");
+            t.setDaemon(true);
+            t.start();
+        });
     }
 
     /**

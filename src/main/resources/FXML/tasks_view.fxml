@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    tasks_view.fxml
+    ===============
+    Vista de tarefas, carregada no contentArea do shell do dashboard.
+    Apresenta a lista de tarefas com título, prazo e estado —
+    alimentada por TasksViewController.
+
+    Layout:
+      - VBox root (.dash-view-root)
+          - Header: HBox com título "Tasks" + botão "Add Task"
+          - ScrollPane com contentor de cartões de tarefa
+-->
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controller.TasksViewController"
+      spacing="0"
+      styleClass="dash-view-root">
+
+    <!-- ========================================================= -->
+    <!-- HEADER                                                     -->
+    <!-- ========================================================= -->
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="settings-header">
+        <padding>
+            <Insets top="28" right="34" bottom="20" left="34"/>
+        </padding>
+        <children>
+            <Label text="Tasks" styleClass="settings-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="+ Add Task" onAction="#handleAddTask" styleClass="dash-add-note-btn"/>
+        </children>
+    </HBox>
+
+    <!-- ========================================================= -->
+    <!-- CONTENT                                                    -->
+    <!-- ========================================================= -->
+    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS" styleClass="settings-scroll">
+        <content>
+            <VBox fx:id="tasksContainer" spacing="10" styleClass="settings-content">
+                <children>
+                    <Label text="No tasks added yet." styleClass="dash-empty-state"/>
+                </children>
+            </VBox>
+        </content>
+    </ScrollPane>
+
+</VBox>

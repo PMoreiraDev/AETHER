@@ -1,6 +1,10 @@
 package controller;
 
 import java.util.List;
+import java.awt.Desktop;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import javafx.beans.binding.Bindings;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -10,8 +14,11 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.DirectoryChooser;
+import persistence.VaultManager;
 import session.UserSession;
 import util.OllamaService;
 
@@ -20,6 +27,9 @@ public class SettingsController {
     @FXML private VBox modelsContainer;
     @FXML private Label activeModelLabel;
     @FXML private Label statusLabel;
+    @FXML private TextField vaultPathField;
+    @FXML private TextField ollamaPathField;
+    @FXML private Label ollamaPathStatus;
 
     private static final String[] MODEL_IDS = {
             "qwen2.5:14b",
@@ -30,6 +40,7 @@ public class SettingsController {
     @FXML
     private void initialize() {
         refresh();
+        refreshFolderPaths();
     }
 
     /** Reloads model state from Ollama and the persisted application settings. */
@@ -129,6 +140,149 @@ public class SettingsController {
         HBox.setHgrow(progressRow, javafx.scene.layout.Priority.ALWAYS);
         card.getChildren().addAll(top, description, bottom);
         return card;
+    }
+
+    // ------------------------------------------------------------------
+    // Folders (vault + Ollama)
+    // ------------------------------------------------------------------
+
+    /**
+     * Preenche os campos de caminho com o vault atual e o executável Ollama
+     * detetado (ou o override guardado).
+     */
+    private void refreshFolderPaths() {
+        if (vaultPathField != null) {
+            vaultPathField.setText(VaultManager.getVaultPath().toString());
+        }
+        if (ollamaPathField != null) {
+            UserSession session = UserSession.getInstance();
+            String override = session.getAppSettings().getOllamaPathOverride();
+            if (override != null && !override.isBlank()) {
+                ollamaPathField.setText(override);
+            } else {
+                String exe = OllamaService.findOllamaExecutable();
+                ollamaPathField.setText(exe != null ? exe : "");
+            }
+            updateOllamaPathStatus();
+        }
+    }
+
+    /** Atualiza o pequeno label de estado por baixo do campo do Ollama. */
+    private void updateOllamaPathStatus() {
+        if (ollamaPathStatus == null) {
+            return;
+        }
+        String exe = OllamaService.findOllamaExecutable();
+        ollamaPathStatus.setText(
+                exe != null ? "Ollama found: " + exe
+                        : "Ollama not found. Install it or pick the path above.");
+    }
+
+    /** Abre um seletor de pasta para escolher a nova localização do vault. */
+    @FXML
+    private void handleBrowseVaultFolder() {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Choose AETHER Vault Folder");
+        File current = new File(vaultPathField.getText().trim());
+        if (current.isDirectory()) {
+            chooser.setInitialDirectory(current);
+        }
+        File selected = chooser.showDialog(vaultPathField.getScene().getWindow());
+        if (selected != null) {
+            vaultPathField.setText(selected.getAbsolutePath());
+        }
+    }
+
+    /** Guarda o caminho do vault nas definições e cria a estrutura de pastas. */
+    @FXML
+    private void handleSaveVaultPath() {
+        String path = vaultPathField.getText().trim();
+        UserSession session = UserSession.getInstance();
+        session.getAppSettings().setVaultPathOverride(path);
+        if (!session.saveAppSettings()) {
+            statusLabel.setText("Could not save the vault path.");
+            return;
+        }
+        // Cria as subpastas na nova localização para o vault ficar pronto.
+        VaultManager.initializeVault();
+        statusLabel.setText("Vault folder set to " + VaultManager.getVaultPath() + ".");
+    }
+
+    /** Abre a pasta do vault no gestor de ficheiros do sistema. */
+    @FXML
+    private void handleOpenVaultFolder() {
+        openInFileExplorer(VaultManager.getVaultPath(), true);
+    }
+
+    /** Abre um seletor de pasta para escolher a pasta do Ollama. */
+    @FXML
+    private void handleBrowseOllamaPath() {
+        DirectoryChooser chooser = new DirectoryChooser();
+        chooser.setTitle("Choose Ollama Folder");
+        File current = new File(ollamaPathField.getText().trim());
+        if (current.isDirectory()) {
+            chooser.setInitialDirectory(current);
+        } else if (current.isFile() && current.getParentFile() != null) {
+            chooser.setInitialDirectory(current.getParentFile());
+        }
+        File selected = chooser.showDialog(ollamaPathField.getScene().getWindow());
+        if (selected != null) {
+            ollamaPathField.setText(selected.getAbsolutePath());
+        }
+    }
+
+    /** Guarda o caminho do Ollama nas definições, validando antes. */
+    @FXML
+    private void handleSaveOllamaPath() {
+        String path = ollamaPathField.getText().trim();
+        if (!path.isBlank() && !OllamaService.isValidOllamaPath(path)) {
+            ollamaPathStatus.setText(
+                    "Could not find an executable Ollama binary at that path. "
+                            + "Pick the ollama executable or its containing folder.");
+            return;
+        }
+        UserSession session = UserSession.getInstance();
+        session.getAppSettings().setOllamaPathOverride(path);
+        if (!session.saveAppSettings()) {
+            statusLabel.setText("Could not save the Ollama path.");
+            return;
+        }
+        statusLabel.setText(path.isBlank() ? "Ollama path reset to auto-detect." : "Ollama path saved.");
+        updateOllamaPathStatus();
+    }
+
+    /** Abre a pasta do executável do Ollama no gestor de ficheiros. */
+    @FXML
+    private void handleOpenOllamaFolder() {
+        String exe = OllamaService.findOllamaExecutable();
+        if (exe != null) {
+            openInFileExplorer(Paths.get(exe), true);
+        } else {
+            statusLabel.setText("Ollama executable not found.");
+        }
+    }
+
+    /**
+     * Abre um caminho no gestor de ficheiros do sistema operativo.
+     *
+     * @param path          o caminho a abrir
+     * @param openParentFolder se {@code true}, abre a pasta pai quando o
+     *                          caminho aponta para um ficheiro
+     */
+    private void openInFileExplorer(Path path, boolean openParentFolder) {
+        File target = path.toFile();
+        if (!target.exists()) {
+            statusLabel.setText("Path does not exist: " + path);
+            return;
+        }
+        if (target.isFile() && openParentFolder) {
+            target = target.getParentFile();
+        }
+        try {
+            Desktop.getDesktop().open(target);
+        } catch (Exception e) {
+            statusLabel.setText("Could not open folder: " + e.getMessage());
+        }
     }
 
     private void selectModel(String modelId) {

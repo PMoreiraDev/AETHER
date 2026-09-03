@@ -1,0 +1,116 @@
+warning: in the working copy of 'src/main/java/controller/AetherAIController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/controller/DashboardController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/controller/DashboardViewController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/controller/OllamaSetUpController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/controller/ProfileEditController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/controller/SettingsController.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/domain/AppSettings.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/persistence/SqliteAppSettingsRepository.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/util/ContextManager.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/java/util/OllamaService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/FXML/aether_ai.fxml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/FXML/dashboard.fxml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/FXML/dashboard_view.fxml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/FXML/ollama_setup.fxml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/FXML/profile.fxml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/FXML/profile_edit.fxml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/FXML/settings.fxml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/main/resources/Style.css', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/src/main/java/controller/AetherAIController.java b/src/main/java/controller/AetherAIController.java[m
+[1mindex c4e32d4..45f89b6 100644[m
+[1m--- a/src/main/java/controller/AetherAIController.java[m
+[1m+++ b/src/main/java/controller/AetherAIController.java[m
+[36m@@ -1,6 +1,8 @@[m
+ package controller;[m
+ [m
+ import java.net.URL;[m
+[32m+[m[32mimport java.util.ArrayList;[m
+[32m+[m[32mimport java.util.List;[m
+ import java.util.ResourceBundle;[m
+ import java.util.logging.Logger;[m
+ import javafx.application.Platform;[m
+[36m@@ -18,6 +20,7 @@[m [mimport javafx.scene.layout.Region;[m
+ import javafx.scene.layout.VBox;[m
+ import javafx.scene.shape.Circle;[m
+ import session.UserSession;[m
+[32m+[m[32mimport session.ChatSession;[m
+ import util.ContextManager;[m
+ import util.OllamaService;[m
+ [m
+[36m@@ -78,6 +81,15 @@[m [mpublic class AetherAIController implements Initializable {[m
+     /** Indica se está à espera de resposta do modelo. */[m
+     private boolean awaitingResponse = false;[m
+ [m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Histórico da conversa, persistido entre trocas de vista através do[m
+[32m+[m[32m     * {@link session.ChatSession}. Sem isto, mudar de vista (ex.: ir ao[m
+[32m+[m[32m     * Dashboard e voltar) recriaria o controlador e apagaria a conversa. A[m
+[32m+[m[32m     * conversa só é reiniciada quando o utilizador clica em "Nova conversa".[m
+[32m+[m[32m     */[m
+[32m+[m[32m    private final List<OllamaService.ChatMessage> conversationHistory =[m
+[32m+[m[32m            session.ChatSession.getInstance().getHistory();[m
+[32m+[m
+     /**[m
+      * Modelo ativo de facto, resolvido em {@link #warmUpEngine} contra o que[m
+      * está realmente instalado — pode diferir do valor guardado em[m
+[36m@@ -107,7 +119,7 @@[m [mpublic class AetherAIController implements Initializable {[m
+         if (modelId != null && !modelId.isBlank()) {[m
+             activeModelId = modelId;[m
+             modelLabel.setText("Local model: " + modelId);[m
+[31m-            addWelcomeMessage();[m
+[32m+[m[32m            restoreConversation();[m
+             warmUpEngine(modelId);[m
+         } else {[m
+             modelLabel.setText("No model configured");[m
+[36m@@ -225,6 +237,24 @@[m [mpublic class AetherAIController implements Initializable {[m
+                 false);[m
+     }[m
+ [m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Restaura a conversa persistida no {@link session.ChatSession}. Se houver[m
+[32m+[m[32m     * histórico anterior (de antes de mudar de vista), as bolhas são[m
+[32m+[m[32m     * recriadas para o utilizador continuar onde deixou. Se não houver, mostra[m
+[32m+[m[32m     * a mensagem de boas-vindas.[m
+[32m+[m[32m     */[m
+[32m+[m[32m    private void restoreConversation() {[m
+[32m+[m[32m        if (!conversationHistory.isEmpty()) {[m
+[32m+[m[32m            for (OllamaService.ChatMessage m : conversationHistory) {[m
+[32m+[m[32m                boolean isUser = "user".equals(m.getRole());[m
+[32m+[m[32m                addMessage(isUser ? "You" : "AETHER", m.getContent(), isUser);[m
+[32m+[m[32m            }[m
+[32m+[m[32m            scrollToBottom();[m
+[32m+[m[32m        } else {[m
+[32m+[m[32m            addWelcomeMessage();[m
+[32m+[m[32m        }[m
+[32m+[m[32m    }[m
+[32m+[m
+     /**[m
+      * Adiciona uma mensagem ao container de conversa.[m
+      * <p>[m
+[36m@@ -347,6 +377,12 @@[m [mpublic class AetherAIController implements Initializable {[m
+         Label replyLabel = addMessageReturningLabel("AETHER", "", false);[m
+         StringBuilder fullReply = new StringBuilder();[m
+ [m
+[32m+[m[32m        // Snapshot do histórico antes da thread de fundo para evitar[m
+[32m+[m[32m        // mutação concorrente enquanto a resposta é gerada.[m
+[32m+[m[32m        List<OllamaService.ChatMessage> requestHistory = new ArrayList<>(conversationHistory);[m
+[32m+[m[32m        // Adiciona a mensagem atual do utilizador ao snapshot enviado à IA.[m
+[32m+[m[32m        requestHistory.add(new OllamaService.ChatMessage("user", message.trim()));[m
+[32m+[m
+         // Tarefa de fundo para chamar o Ollama. Se nada for recebido, o[m
+         // próprio fio de fundo faz o diagnóstico (evita nova ronda de rede no[m
+         // fio da interface) e o motivo passa a ser mostrado ao utilizador em[m
+[36m@@ -358,8 +394,17 @@[m [mpublic class AetherAIController implements Initializable {[m
+                 // system instructions + dynamic date/time + compact summary + relevant context.[m
+                 // O contexto é selecionado com base na mensagem do utilizador,[m
+                 // em vez de enviar indiscriminadamente toda a base de dados.[m
+[31m-                String systemContext = ContextManager.buildSystemPrompt(message.trim());[m
+[31m-                boolean received = OllamaService.chatStream(modelId, message.trim(), systemContext, token -> {[m
+[32m+[m[32m                //[m
+[32m+[m[32m                // Para a seleção de contexto, usamos não só a mensagem atual[m
+[32m+[m[32m                // mas também as últimas mensagens do utilizador no histórico.[m
+[32m+[m[32m                // Isto resolve perguntas de seguimento como "e o trabalho[m
+[32m+[m[32m                // dele?" — a mensagem atual não menciona "Rafael", mas o[m
+[32m+[m[32m                // turno anterior sim, pelo que o contexto certo é recuperado.[m
+[32m+[m[32m                String contextQuery = buildContextQuery(message.trim(), conversationHistory);[m
+[32m+[m[32m                String systemContext = ContextManager.b

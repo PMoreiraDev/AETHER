@@ -139,8 +139,8 @@
                         <children>
                             <Button fx:id="navDashboard" text="Dashboard" styleClass="dash-nav-item, dash-nav-item-active" onAction="#handleNavDashboard" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
                             <Button fx:id="navAetherAI" text="AETHER AI" styleClass="dash-nav-item" onAction="#handleNavAetherAI" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navCalendar" text="Calendar" styleClass="dash-nav-item" onAction="#handleNavCalendar" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
                             <Button fx:id="navPeople" text="People" styleClass="dash-nav-item" onAction="#handleNavPeople" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navProjects" text="Projects" styleClass="dash-nav-item" onAction="#handleNavProjects" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
                             <Button fx:id="navEvents" text="Events" styleClass="dash-nav-item" onAction="#handleNavEvents" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
                             <Button fx:id="navTasks" text="Tasks" styleClass="dash-nav-item" onAction="#handleNavTasks" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
                             <Button fx:id="navNotes" text="Notes" styleClass="dash-nav-item" onAction="#handleNavNotes" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
