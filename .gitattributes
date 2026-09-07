@@ -1,0 +1,11 @@
+# Keep repository text files normalized to LF across operating systems.
+* text=auto eol=lf
+*.java text eol=lf
+*.xml text eol=lf
+*.fxml text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.properties text eol=lf
+*.json text eol=lf
+*.svg text eol=lf
