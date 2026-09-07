@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    AETHER distribution assembly descriptor.
+
+    Produces a zip that bundles everything needed to run AETHER without Maven:
+      * the application jar (AETHER-1.0-SNAPSHOT.jar)
+      * a lib/ folder with all runtime dependencies (including the
+        platform-specific JavaFX native jars resolved for the build OS)
+      * the launch scripts (scripts/aether.sh, scripts/aether.bat)
+      * PACKAGING.md
+      * a resources/ copy of src/main/resources (i18n, FXML, images, Style.css)
+        so runtime resources resolve even if the jar is rebuilt without them.
+
+    The runtime classpath in the launch scripts resolves resources from the
+    application jar first, then from the lib/ and resources/ folders.
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0
+                               https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+
+    <id>distribution</id>
+
+    <formats>
+        <format>zip</format>
+    </formats>
+
+    <!-- Include a base directory (AETHER-1.0-SNAPSHOT/) inside the zip. -->
+    <includeBaseDirectory>true</includeBaseDirectory>
+
+    <!-- Runtime dependencies -> lib/ (platform-specific JavaFX jars included). -->
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib</outputDirectory>
+            <useProjectArtifact>false</useProjectArtifact>
+            <scope>runtime</scope>
+            <unpack>false</unpack>
+        </dependencySet>
+    </dependencySets>
+
+    <fileSets>
+
+        <!-- The built application jar (already contains src/main/resources). -->
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>${project.build.finalName}.jar</include>
+            </includes>
+        </fileSet>
+
+        <!-- Launch scripts. -->
+        <fileSet>
+            <directory>${project.basedir}/scripts</directory>
+            <outputDirectory>scripts</outputDirectory>
+            <fileMode>0755</fileMode>
+            <includes>
+                <include>aether.sh</include>
+                <include>aether.bat</include>
+            </includes>
+        </fileSet>
+
+        <!-- Packaging documentation. -->
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>PACKAGING.md</include>
+            </includes>
+        </fileSet>
+
+        <!-- Runtime resources (fallback alongside the jar contents). -->
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources</directory>
+            <outputDirectory>resources</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </fileSet>
+
+    </fileSets>
+
+</assembly>

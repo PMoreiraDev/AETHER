@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
@@ -14,11 +15,11 @@
             <padding><Insets top="28" right="34" bottom="20" left="34"/></padding>
             <children>
                 <HBox alignment="CENTER_LEFT" spacing="14">
-                    <Label text="Settings" styleClass="settings-title"/>
+                    <Label text="%settings.title" styleClass="settings-title"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Button text="Refresh" onAction="#handleRefresh" styleClass="settings-secondary-btn"/>
+                    <Button text="%common.refresh" onAction="#handleRefresh" styleClass="settings-secondary-btn"/>
                 </HBox>
-                <Label text="Manage your local AETHER AI model and folders" styleClass="settings-subtitle"/>
+                <Label text="%settings.subtitle" styleClass="settings-subtitle"/>
             </children>
         </VBox>
     </top>
@@ -27,35 +28,54 @@
             <content>
                 <VBox spacing="18" styleClass="settings-content">
                     <VBox spacing="6" styleClass="settings-active-card">
-                        <Label text="ACTIVE MODEL" styleClass="settings-section-label"/>
+                        <Label text="%settings.activeModel" styleClass="settings-section-label"/>
                         <Label fx:id="activeModelLabel" text="No model selected" styleClass="settings-active-model"/>
-                        <Label text="AETHER AI uses this model for every chat. Changing it is saved locally." styleClass="settings-help" wrapText="true"/>
+                        <Label text="%settings.activeModel.help" styleClass="settings-help" wrapText="true"/>
                     </VBox>
 
-                    <Label text="FOLDERS" styleClass="settings-section-title"/>
+                    <Label text="%settings.folders" styleClass="settings-section-title"/>
                     <VBox spacing="6" styleClass="settings-active-card">
-                        <Label text="AETHER VAULT FOLDER" styleClass="settings-section-label"/>
-                        <Label text="Where your people, events, tasks and notes are stored as Markdown files. Changing this folder switches the active vault — existing files are not moved automatically." styleClass="settings-help" wrapText="true"/>
+                        <Label text="%settings.vaultFolderLabel" styleClass="settings-section-label"/>
+                        <Label text="%settings.vaultFolder.help" styleClass="settings-help" wrapText="true"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <TextField fx:id="vaultPathField" editable="true" HBox.hgrow="ALWAYS" styleClass="campo-texto"/>
-                            <Button text="Browse" onAction="#handleBrowseVaultFolder" styleClass="settings-secondary-btn"/>
-                            <Button text="Save" onAction="#handleSaveVaultPath" styleClass="settings-primary-btn"/>
-                            <Button text="Open" onAction="#handleOpenVaultFolder" styleClass="settings-secondary-btn"/>
+                            <Button text="%common.browse" onAction="#handleBrowseVaultFolder" styleClass="settings-secondary-btn"/>
+                            <Button text="%common.save" onAction="#handleSaveVaultPath" styleClass="settings-primary-btn"/>
+                            <Button text="%common.open" onAction="#handleOpenVaultFolder" styleClass="settings-secondary-btn"/>
                         </HBox>
                     </VBox>
                     <VBox spacing="6" styleClass="settings-active-card">
-                        <Label text="OLLAMA FOLDER / EXECUTABLE" styleClass="settings-section-label"/>
-                        <Label text="Where the Ollama binary is installed. You can pick the ollama executable or the folder that contains it. Leave blank to auto-detect." styleClass="settings-help" wrapText="true"/>
+                        <Label text="%settings.ollamaFolderLabel" styleClass="settings-section-label"/>
+                        <Label text="%settings.ollamaFolder.help" styleClass="settings-help" wrapText="true"/>
                         <HBox spacing="8" alignment="CENTER_LEFT">
                             <TextField fx:id="ollamaPathField" editable="true" HBox.hgrow="ALWAYS" styleClass="campo-texto"/>
-                            <Button text="Browse" onAction="#handleBrowseOllamaPath" styleClass="settings-secondary-btn"/>
-                            <Button text="Save" onAction="#handleSaveOllamaPath" styleClass="settings-primary-btn"/>
-                            <Button text="Open" onAction="#handleOpenOllamaFolder" styleClass="settings-secondary-btn"/>
+                            <Button text="%common.browse" onAction="#handleBrowseOllamaPath" styleClass="settings-secondary-btn"/>
+                            <Button text="%common.save" onAction="#handleSaveOllamaPath" styleClass="settings-primary-btn"/>
+                            <Button text="%common.open" onAction="#handleOpenOllamaFolder" styleClass="settings-secondary-btn"/>
                         </HBox>
                         <Label fx:id="ollamaPathStatus" text="" styleClass="settings-help" wrapText="true"/>
                     </VBox>
 
-                    <Label text="LOCAL AI MODELS" styleClass="settings-section-title"/>
+                    <Label text="%settings.appearance" styleClass="settings-section-title"/>
+                    <VBox spacing="12" styleClass="settings-active-card">
+                        <HBox styleClass="settings-form-row">
+                            <Label text="%settings.language.label" styleClass="settings-form-label"/>
+                            <HBox fx:id="languageSegmented" styleClass="aether-segmented"/>
+                        </HBox>
+                        <Label text="%settings.language.help" styleClass="settings-help" wrapText="true"/>
+                    </VBox>
+
+                    <Label text="%settings.backup.safety" styleClass="settings-section-title"/>
+                    <VBox spacing="6" styleClass="settings-active-card">
+                        <Label fx:id="lastBackupLabel" text="%settings.backup.lastNone" styleClass="settings-help" wrapText="true"/>
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Button text="%settings.backup.createNow" onAction="#handleCreateBackup" styleClass="settings-primary-btn"/>
+                            <Button text="%settings.backup.openFolder" onAction="#handleOpenBackupsFolder" styleClass="settings-secondary-btn"/>
+                        </HBox>
+                        <Label text="%settings.backup.help" styleClass="settings-help" wrapText="true"/>
+                    </VBox>
+
+                    <Label text="%settings.models" styleClass="settings-section-title"/>
                     <VBox fx:id="modelsContainer" spacing="12"/>
                     <Label fx:id="statusLabel" text="" styleClass="settings-status" wrapText="true"/>
                 </VBox>

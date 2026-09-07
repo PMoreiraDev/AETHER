@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.ResourceBundle;
 import java.util.logging.Logger;
 import javafx.fxml.FXML;
@@ -15,8 +16,11 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
@@ -26,6 +30,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import session.UserSession;
 import util.AvatarImages;
+import util.I18n;
 import domain.UserProfile;
 
 /**
@@ -42,6 +47,8 @@ import domain.UserProfile;
  * @version 1.0
  */
 public class ProfileViewController implements Initializable {
+
+    @FXML private Label suggestedUpdatesLabel;
 
     /**
      * Cria o controlador. Instanciado pelo {@link javafx.fxml.FXMLLoader}.
@@ -87,6 +94,7 @@ public class ProfileViewController implements Initializable {
     @FXML private Label infoBirthdayLabel;
     @FXML private Label infoOccupationsLabel;
     @FXML private Label infoAboutLabel;
+    @FXML private Label infoLocationLabel;
     @FXML private Label infoStudiesLabel;
     @FXML private Label infoExperienceLabel;
     @FXML private Label infoSkillsLabel;
@@ -96,7 +104,7 @@ public class ProfileViewController implements Initializable {
     @FXML private Label infoProjectsLabel;
     @FXML private Label infoWorkStyleLabel;
     @FXML private Label infoSummaryLabel;
-    @FXML private Label suggestedUpdatesLabel;
+    @FXML private VBox suggestedUpdatesContainer;
 
     // ------------------------------------------------------------------
     // FXML — Achievements
@@ -110,6 +118,10 @@ public class ProfileViewController implements Initializable {
 
     @FXML private TextArea aiContextInput;
     @FXML private Label contextStatusLabel;
+    @FXML private HBox aiContextToolbar;
+    @FXML private ToggleButton aiContextPreviewBtn;
+    @FXML private VBox aiContextPreview;
+    private boolean aiContextPreviewMode = false;
 
     // ------------------------------------------------------------------
     // Inicialização
@@ -130,6 +142,11 @@ public class ProfileViewController implements Initializable {
         loadActivity();
         loadAchievements();
         loadAiContext();
+        loadSuggestedUpdates();
+        // Refresca as sugestões pendentes quando o vault/propostas mudam
+        // (ex.: nova proposta criada no chat, ou aceitação noutro lado),
+        // para o perfil ficar sempre coerente com o badge de notificações.
+        util.VaultRefreshBus.subscribe(event -> javafx.application.Platform.runLater(this::loadSuggestedUpdates));
     }
 
     // ------------------------------------------------------------------
@@ -210,9 +227,20 @@ public class ProfileViewController implements Initializable {
         LOGGER.info("Profile view loaded for: " + displayName);
 
         // Display AI-suggested profile updates (if any)
-        String suggestedUpdates = profile.getSuggestedUpdates();
-        if (suggestedUpdates != null && !suggestedUpdates.isBlank()) {
-            suggestedUpdatesLabel.setText(suggestedUpdates);
+        // FONTE ÚNICA (spec #11): as sugestões pendentes vêm do ProposalStore —
+        // o mesmo estado que alimenta o sino e a aprovação — e não do campo
+        // legado suggestedUpdates do UserProfile (que podia divergir).
+        List<ai.ProposalStore.Snapshot> pending = ai.ProposalStore.getInstance().pending();
+        if (!pending.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            for (ai.ProposalStore.Snapshot s : pending) {
+                sb.append(s.entityType).append(':')
+                        .append(s.identifier == null || s.identifier.isBlank() ? "profile" : s.identifier)
+                        .append(" — ")
+                        .append(s.reason == null || s.reason.isBlank() ? "(no reason given)" : s.reason)
+                        .append('\n');
+            }
+            suggestedUpdatesLabel.setText(sb.toString().trim());
             suggestedUpdatesLabel.getStyleClass().removeAll("profile-suggested-hint");
             suggestedUpdatesLabel.getStyleClass().add("profile-suggested-text");
         } else {
@@ -294,6 +322,7 @@ public class ProfileViewController implements Initializable {
         // About
         String about = profile.getAbout();
         infoAboutLabel.setText(about != null && !about.isBlank() ? about : "—");
+        infoLocationLabel.setText(displayOrDash(profile.getLocation()));
 
         // Structured fields
         infoStudiesLabel.setText(displayOrDash(profile.getStudies()));
@@ -326,9 +355,9 @@ public class ProfileViewController implements Initializable {
      * </p>
      */
     private void loadStats() {
-        statProjectsLabel.setText("0");
-        statTasksLabel.setText("0");
-        statEventsLabel.setText("0");
+        statProjectsLabel.setText(String.valueOf(persistence.VaultManager.listProjects().size()));
+        statTasksLabel.setText(String.valueOf(persistence.VaultManager.listTasks().size()));
+        statEventsLabel.setText(String.valueOf(persistence.VaultManager.listEvents().size()));
 
         // Years: approximate from birthday if available
         UserProfile profile = UserSession.getInstance().getUserProfile();
@@ -373,6 +402,188 @@ public class ProfileViewController implements Initializable {
         Label empty = new Label("No achievements yet.");
         empty.getStyleClass().add("profile-empty-hint");
         achievementsBox.getChildren().add(empty);
+    }
+
+    // ------------------------------------------------------------------
+    // Suggested profile updates
+    // ------------------------------------------------------------------
+
+    /**
+     * Carrega TODAS as propostas pendentes persistidas (perfil, pessoas,
+     * projetos, tarefas, eventos, relações) — não só as de perfil. Assim, o
+     * badge de notificações (que conta todas) corresponde ao que aparece aqui,
+     * e cada proposta é apresentada com um título que diz o que é.
+     * Sem contadores falsos: se não há propostas, mostra o estado vazio.
+     */
+    private void loadSuggestedUpdates() {
+        suggestedUpdatesContainer.getChildren().clear();
+        List<ai.ProposalStore.Snapshot> pending = ai.ProposalStore.getInstance().pending();
+        if (pending.isEmpty()) {
+            Label empty = new Label(I18n.tr("ai.proposal.suggested.none"));
+            empty.getStyleClass().add("profile-suggested-hint");
+            suggestedUpdatesContainer.getChildren().add(empty);
+            return;
+        }
+        for (ai.ProposalStore.Snapshot snapshot : pending) {
+            suggestedUpdatesContainer.getChildren().add(buildSuggestedUpdate(snapshot));
+        }
+    }
+
+    private VBox buildSuggestedUpdate(ai.ProposalStore.Snapshot snapshot) {
+        VBox card = new VBox(8);
+        card.getStyleClass().add("ai-proposal-card");
+        // Título descritivo: diz de que é a proposta (pessoa/projeto/tarefa/...).
+        Label title = new Label(I18n.tr(proposalTitleKey(snapshot)));
+        title.getStyleClass().add("ai-proposal-title");
+        card.getChildren().add(title);
+        // Eyebrow com o tipo de ação + identificador alvo, para contexto rápido.
+        String eyebrowText = snapshot.actionType;
+        if (snapshot.identifier != null && !snapshot.identifier.isBlank()) {
+            eyebrowText += " · " + snapshot.identifier;
+        }
+        Label eyebrow = new Label(eyebrowText);
+        eyebrow.getStyleClass().add("ai-proposal-eyebrow");
+        card.getChildren().add(eyebrow);
+        snapshot.fields.forEach((field, value) -> {
+            // Para atualizações de perfil, se o campo já tiver um valor
+            // confirmado diferente, mostra Current vs Suggested (spec #11 —
+            // alterações contraditórias não sobrescrevem silenciosamente).
+            String current = "PROFILE".equalsIgnoreCase(snapshot.entityType)
+                    ? currentProfileValue(field) : null;
+            if (current != null && !current.isBlank()
+                    && !current.trim().equalsIgnoreCase(value == null ? "" : value.trim())) {
+                VBox change = new VBox(2);
+                Label cur = new Label(I18n.tr("ai.proposal.current") + ": " + current);
+                cur.getStyleClass().add("ai-proposal-meta-label");
+                cur.setWrapText(true);
+                Label sug = new Label(I18n.tr("ai.proposal.suggested") + ": " + (value == null ? "" : value));
+                sug.getStyleClass().add("ai-proposal-meta-value");
+                sug.setWrapText(true);
+                change.getChildren().addAll(cur, sug);
+                card.getChildren().add(change);
+            } else {
+                HBox row = new HBox(8);
+                Label key = new Label(fieldLabel(field) + ":");
+                key.getStyleClass().add("ai-proposal-meta-label");
+                Label val = new Label(value == null ? "" : value);
+                val.getStyleClass().add("ai-proposal-meta-value");
+                val.setWrapText(true);
+                row.getChildren().addAll(key, val);
+                card.getChildren().add(row);
+            }
+        });
+        if (snapshot.sourceContext != null && !snapshot.sourceContext.isBlank()) {
+            Label source = new Label(I18n.tr("ai.proposal.source") + ": " + snapshot.sourceContext);
+            source.getStyleClass().add("ai-proposal-subtitle");
+            source.setWrapText(true);
+            card.getChildren().add(source);
+        }
+        HBox actions = new HBox(8);
+        Button accept = new Button(I18n.tr("ai.proposal.accept"));
+        Button reject = new Button(I18n.tr("ai.proposal.reject"));
+        accept.getStyleClass().addAll("proposal-btn", "proposal-accept-btn");
+        reject.getStyleClass().addAll("proposal-btn", "proposal-reject-btn");
+        actions.getChildren().addAll(accept, reject);
+        card.getChildren().add(actions);
+
+        accept.setOnAction(e -> {
+            accept.setDisable(true); reject.setDisable(true);
+            ai.AiActionProposal proposal = proposalFromSnapshot(snapshot);
+            boolean ok = ai.ApprovalFlow.executeApproved(proposal).success();
+            if (ok) {
+                ai.ProposalStore.getInstance().markAccepted(snapshot.id);
+                loadPersonalInfo();
+                loadProfileSummary();
+                card.getChildren().add(new Label("✓ " + I18n.tr("ai.profile.suggested.saved")));
+            } else {
+                accept.setDisable(false); reject.setDisable(false);
+                card.getChildren().add(new Label(I18n.tr("ai.profile.suggested.failed")));
+                ai.ProposalStore.getInstance().markFailed(snapshot.id);
+                util.VaultRefreshBus.publish(util.VaultRefreshBus.ChangeType.UPDATED, "PROFILE");
+            }
+            loadSuggestedUpdates();
+            if (DashboardController.getActive() != null) DashboardController.getActive().refreshUserProfileCard();
+        });
+        reject.setOnAction(e -> {
+            ai.ProposalStore.getInstance().markRejected(snapshot.id);
+            util.VaultRefreshBus.publish(util.VaultRefreshBus.ChangeType.UPDATED, "PROFILE");
+            loadSuggestedUpdates();
+        });
+        return card;
+    }
+
+    /**
+     * Devolve a chave I18n do título adequado ao tipo de proposta, para cada
+     * proposta "dizer de que é".
+     */
+    private static String proposalTitleKey(ai.ProposalStore.Snapshot s) {
+        String e = s.entityType == null ? "" : s.entityType.toUpperCase(Locale.ROOT);
+        String a = s.actionType == null ? "" : s.actionType.toUpperCase(Locale.ROOT);
+        String ent = switch (e) {
+            case "PERSON" -> "person";
+            case "PROJECT" -> "project";
+            case "TASK" -> "task";
+            case "EVENT" -> "event";
+            case "NOTE" -> "note";
+            default -> "profile";
+        };
+        switch (a) {
+            case "LINK_ENTITIES": return "ai.proposal.title.link";
+            case "UNLINK_ENTITIES": return "ai.proposal.title.unlink";
+            case "DELETE_ENTITY": return "ai.proposal.title.delete";
+            case "CREATE_ENTITY": return "ai.proposal.title." + ent + ".create";
+            case "UPDATE_ENTITY":
+                return "PROFILE".equals(e)
+                        ? "ai.proposal.title.profile"
+                        : "ai.proposal.title." + ent + ".update";
+            default: return "ai.proposal.title.profile";
+        }
+    }
+
+    /** Traduz chaves técnicas de campos do perfil em etiquetas legíveis. */
+    private static String fieldLabel(String field) {
+        return util.ProfileFieldLabels.label(field);
+    }
+
+    /**
+     * Devolve o valor atual confirmado de um campo do perfil, para mostrar
+     * "Current vs Suggested" nas Suggested Updates de perfil (spec #11).
+     */
+    private static String currentProfileValue(String field) {
+        UserProfile p = UserSession.getInstance().getUserProfile();
+        if (field == null) return "";
+        return switch (field) {
+            case "fullName" -> p.getFullName(); case "preferredName" -> p.getPreferredName();
+            case "about" -> p.getAbout(); case "occupation" -> p.getOccupation();
+            case "studies" -> p.getStudies(); case "experience" -> p.getExperience();
+            case "skills" -> p.getSkills(); case "interests" -> p.getInterests();
+            case "objectives" -> p.getObjectives(); case "preferences" -> p.getPreferences();
+            case "projects" -> p.getProjects(); case "workStyle" -> p.getWorkStyle();
+            case "location" -> p.getLocation(); case "aiContext" -> p.getAiContext();
+            case "inferredContext" -> p.getInferredContext();
+            case "profileSummary" -> p.getProfileSummary();
+            default -> "";
+        };
+    }
+
+    private ai.AiActionProposal proposalFromSnapshot(ai.ProposalStore.Snapshot s) {
+        // entityId: "profile" para atualizações de perfil; para entidades usa-se
+        // o identificador alvo quando faz sentido (updates/links), ou vazio
+        // para criações (o ActionExecutor lê o nome/título dos fields).
+        String entityId = "PROFILE".equalsIgnoreCase(s.entityType) ? "profile"
+                : (s.identifier == null ? "" : s.identifier);
+        ai.AiActionProposal.Builder b = new ai.AiActionProposal.Builder()
+                .actionType(ai.AiActionType.valueOf(s.actionType))
+                .entityType(domain.entities.ContextEntityType.valueOf(s.entityType))
+                .entityId(entityId)
+                .reason(s.reason)
+                .confidence(s.confidence)
+                .sourceContext(s.sourceContext)
+                .semanticClassification(s.semanticClassification);
+        try { b.trustLevel(ai.TrustLevel.valueOf(s.trustLevel)); } catch (Exception ignored) { }
+        if (s.fields != null) s.fields.forEach(b::field);
+        if (s.relationships != null) b.relationships(s.relationships);
+        return b.build();
     }
 
     // ------------------------------------------------------------------
@@ -488,6 +699,8 @@ public class ProfileViewController implements Initializable {
      */
     @FXML
     private void handleSaveContext() {
+        // Garante que o conteúdo editado está visível no TextArea antes de guardar.
+        setAiContextPreviewMode(false);
         String context = aiContextInput.getText();
         if (context == null) {
             context = "";
@@ -501,10 +714,88 @@ public class ProfileViewController implements Initializable {
             contextStatusLabel.setText("Context saved");
             contextStatusLabel.getStyleClass().setAll("profile-context-status", "profile-context-saved");
             LOGGER.info("AI Context saved for user: " + profile.getFullName());
+            // Sincroniza a pasta User/ do vault (spec #12) — merge-read-write.
+            try {
+                persistence.UserVaultSync.syncProfile(profile, "MANUAL_EDIT");
+            } catch (RuntimeException rex) {
+                LOGGER.warning("Falha ao sincronizar vault após edição manual: " + rex.getMessage());
+            }
+            util.VaultRefreshBus.publish(util.VaultRefreshBus.ChangeType.UPDATED, "PROFILE");
         } else {
             contextStatusLabel.setText("Failed to save");
             contextStatusLabel.getStyleClass().setAll("profile-context-status", "profile-context-error");
             LOGGER.warning("Failed to save AI Context.");
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Markdown editor — mesma experiência das Notes (spec #12, #13)
+    // ------------------------------------------------------------------
+
+    /** Alterna entre modo edição e preview, reutilizando NoteMarkdownRenderer. */
+    @FXML
+    private void ctxTogglePreview() {
+        setAiContextPreviewMode(!aiContextPreviewMode);
+    }
+
+    private void setAiContextPreviewMode(boolean preview) {
+        this.aiContextPreviewMode = preview;
+        if (aiContextInput != null) {
+            aiContextInput.setManaged(!preview);
+            aiContextInput.setVisible(!preview);
+        }
+        if (aiContextPreview != null) {
+            aiContextPreview.setManaged(preview);
+            aiContextPreview.setVisible(preview);
+            if (preview) {
+                aiContextPreview.getChildren().clear();
+                String text = aiContextInput == null ? "" : aiContextInput.getText();
+                util.NoteMarkdownRenderer.renderInto(aiContextPreview, text == null ? "" : text);
+            }
+        }
+        if (aiContextPreviewBtn != null) aiContextPreviewBtn.setSelected(preview);
+        // A toolbar só faz sentido em modo edição (igual ao NoteEditorController).
+        if (aiContextToolbar != null) {
+            aiContextToolbar.setManaged(!preview);
+            aiContextToolbar.setVisible(!preview);
+        }
+    }
+
+    @FXML private void ctxInsertBold() { ctxWrap("**", "**", "bold text"); }
+    @FXML private void ctxInsertItalic() { ctxWrap("*", "*", "italic text"); }
+    @FXML private void ctxInsertCode() { ctxWrap("`", "`", "code"); }
+    @FXML private void ctxInsertH1() { ctxPrefix("# ", "Heading 1"); }
+    @FXML private void ctxInsertH2() { ctxPrefix("## ", "Heading 2"); }
+    @FXML private void ctxInsertBullet() { ctxPrefix("- ", "List item"); }
+    @FXML private void ctxInsertNumbered() { ctxPrefix("1. ", "List item"); }
+    @FXML private void ctxInsertQuote() { ctxPrefix("> ", "Quote"); }
+    @FXML private void ctxInsertLink() { ctxWrap("[", "](https://)", "link text"); }
+
+    private void ctxWrap(String before, String after, String placeholder) {
+        if (aiContextInput == null) return;
+        String sel = aiContextInput.getSelectedText();
+        if (sel != null && !sel.isEmpty()) {
+            int start = aiContextInput.getSelection().getStart();
+            int end = aiContextInput.getSelection().getEnd();
+            aiContextInput.replaceText(start, end, before + sel + after);
+            aiContextInput.selectRange(start + before.length(), start + before.length() + sel.length());
+        } else {
+            int caret = aiContextInput.getCaretPosition();
+            aiContextInput.insertText(caret, before + placeholder + after);
+            aiContextInput.selectRange(caret + before.length(), caret + before.length() + placeholder.length());
+        }
+        aiContextInput.requestFocus();
+    }
+
+    private void ctxPrefix(String prefix, String placeholder) {
+        if (aiContextInput == null) return;
+        String text = aiContextInput.getText();
+        int caret = aiContextInput.getCaretPosition();
+        int lineStart = 0;
+        for (int i = caret - 1; i >= 0; i--) {
+            if (text.charAt(i) == '\n') { lineStart = i + 1; break; }
+        }
+        aiContextInput.insertText(lineStart, prefix);
+        aiContextInput.requestFocus();
     }
 }

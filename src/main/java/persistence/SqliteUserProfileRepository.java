@@ -122,7 +122,7 @@ public class SqliteUserProfileRepository implements UserProfileRepository {
     private void migrateAddStructuredFields() {
         String[] newColumns = {
             "studies", "experience", "skills", "interests", "objectives",
-            "preferences", "projects", "work_style", "profile_summary",
+            "preferences", "projects", "work_style", "location", "profile_summary",
             "inferred_context", "suggested_updates"
         };
 
@@ -156,7 +156,7 @@ public class SqliteUserProfileRepository implements UserProfileRepository {
     public Optional<UserProfile> find() {
         String sql = """
                 SELECT full_name, preferred_name, birth_date, occupations, about_you, ai_context, profile_photo_path,
-                       studies, experience, skills, interests, objectives, preferences, projects, work_style,
+                       studies, experience, skills, interests, objectives, preferences, projects, work_style, location,
                        profile_summary, inferred_context, suggested_updates
                 FROM user_profile
                 WHERE id = 1
@@ -190,6 +190,7 @@ public class SqliteUserProfileRepository implements UserProfileRepository {
             profile.setPreferences(resultSet.getString("preferences"));
             profile.setProjects(resultSet.getString("projects"));
             profile.setWorkStyle(resultSet.getString("work_style"));
+            profile.setLocation(resultSet.getString("location"));
             profile.setProfileSummary(resultSet.getString("profile_summary"));
             profile.setInferredContext(resultSet.getString("inferred_context"));
             profile.setSuggestedUpdates(resultSet.getString("suggested_updates"));
@@ -210,9 +211,9 @@ public class SqliteUserProfileRepository implements UserProfileRepository {
         String sql = """
                 INSERT INTO user_profile
                     (id, schema_version, full_name, preferred_name, birth_date, occupations, about_you, ai_context, profile_photo_path,
-                     studies, experience, skills, interests, objectives, preferences, projects, work_style,
+                     studies, experience, skills, interests, objectives, preferences, projects, work_style, location,
                      profile_summary, inferred_context, suggested_updates)
-                VALUES (1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (1, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE SET
                     schema_version = excluded.schema_version,
                     full_name = excluded.full_name,
@@ -230,6 +231,7 @@ public class SqliteUserProfileRepository implements UserProfileRepository {
                     preferences = excluded.preferences,
                     projects = excluded.projects,
                     work_style = excluded.work_style,
+                    location = excluded.location,
                     profile_summary = excluded.profile_summary,
                     inferred_context = excluded.inferred_context,
                     suggested_updates = excluded.suggested_updates
@@ -252,9 +254,10 @@ public class SqliteUserProfileRepository implements UserProfileRepository {
             statement.setString(13, nullToEmpty(profile.getPreferences()));
             statement.setString(14, nullToEmpty(profile.getProjects()));
             statement.setString(15, nullToEmpty(profile.getWorkStyle()));
-            statement.setString(16, nullToEmpty(profile.getProfileSummary()));
-            statement.setString(17, nullToEmpty(profile.getInferredContext()));
-            statement.setString(18, nullToEmpty(profile.getSuggestedUpdates()));
+            statement.setString(16, nullToEmpty(profile.getLocation()));
+            statement.setString(17, nullToEmpty(profile.getProfileSummary()));
+            statement.setString(18, nullToEmpty(profile.getInferredContext()));
+            statement.setString(19, nullToEmpty(profile.getSuggestedUpdates()));
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new PersistenceException("Could not save the user profile.", e);

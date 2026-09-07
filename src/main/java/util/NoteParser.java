@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  * </p>
  * <p>
  * O NoteParser usa a mesma fonte de data dinâmica do ContextManager
- * (timezone Europe/Lisbon) para resolver datas relativas.
+ * (system timezone) para resolver datas relativas.
  * </p>
  *
  * @author Paulo Moreira
@@ -36,7 +36,7 @@ public final class NoteParser {
     private static final Logger LOGGER = Logger.getLogger(NoteParser.class.getName());
 
     /** Timezone do utilizador. */
-    private static final ZoneId USER_TIMEZONE = ZoneId.of("Europe/Lisbon");
+    private static final ZoneId USER_TIMEZONE = ZoneId.systemDefault();
 
     /**
      * Construtor privado — classe utilitária.

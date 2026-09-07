@@ -10,6 +10,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import util.I18n;
 import javafx.stage.Window;
 
 /**
@@ -75,7 +76,8 @@ public final class Navigator {
             return null;
         }
         try {
-            return FXMLLoader.load(resource);
+            FXMLLoader loader = new FXMLLoader(resource, I18n.getBundle());
+            return loader.load();
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Falha ao carregar o ecrã '" + fxmlPath + "'.", e);
             return null;

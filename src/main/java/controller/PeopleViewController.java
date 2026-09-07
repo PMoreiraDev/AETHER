@@ -60,9 +60,10 @@ public class PeopleViewController implements Initializable {
         var people = VaultManager.listPeople();
 
         if (people.isEmpty()) {
-            Label empty = new Label("No people yet. Add someone to get started.");
-            empty.getStyleClass().add("dash-empty-state");
-            peopleContainer.getChildren().add(empty);
+            peopleContainer.getChildren().add(
+                    util.EmptyState.of("empty.people.title", "empty.people.hint")
+                            .cta("empty.people.cta", () -> handleAddPerson())
+                            .build());
             return;
         }
 

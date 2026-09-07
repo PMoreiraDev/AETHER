@@ -198,6 +198,31 @@ public final class AetherDialogs {
         return dialog.showAndWait();
     }
 
+    /** Shows an informational dialog using the shared dark-glass dialog styling. */
+    public static void info(String message) {
+        Alert alert = new Alert(AlertType.INFORMATION);
+        style(alert);
+        alert.setGraphic(null); // Remove o ícone azul do Modena — fica só o texto sobre o vidro escuro.
+        alert.setTitle("AETHER");
+        alert.setHeaderText(null);
+        alert.setContentText(message == null ? "" : message);
+        alert.showAndWait();
+    }
+
+    /** Shows a generic confirmation dialog using the shared dark-glass styling. */
+    public static boolean confirm(String title, String message, String confirmLabel) {
+        Alert alert = new Alert(AlertType.CONFIRMATION);
+        style(alert);
+        alert.setGraphic(null); // Remove o ícone de interrogação azul do Modena.
+        alert.setTitle(title == null ? "AETHER" : title);
+        alert.setHeaderText(null);
+        alert.setContentText(message == null ? "" : message);
+        ButtonType yes = new ButtonType(confirmLabel == null ? "Confirm" : confirmLabel, ButtonBar.ButtonData.OK_DONE);
+        ButtonType no = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getDialogPane().getButtonTypes().setAll(no, yes);
+        return alert.showAndWait().filter(r -> r == yes).isPresent();
+    }
+
     /**
      * Mostra um diálogo de confirmação de eliminação no visual do AETHER.
      * O botão de confirmação está rotulado como "Delete" para que a ação seja
@@ -210,6 +235,7 @@ public final class AetherDialogs {
         Alert alert = new Alert(AlertType.CONFIRMATION);
         DialogPane pane = alert.getDialogPane();
         style(alert);
+        alert.setGraphic(null); // Remove o ícone de interrogação azul do Modena — coerente com o vidro escuro.
         alert.setTitle("Delete");
         alert.setHeaderText("Delete \"" + (name == null || name.isBlank() ? "this item" : name) + "\"?");
         alert.setContentText("This action cannot be undone.");

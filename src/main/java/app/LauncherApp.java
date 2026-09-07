@@ -72,6 +72,10 @@ public class LauncherApp extends Application {
         try {
             handleDevelopmentReset();
 
+            // Start monitoring the vault for external (Obsidian) edits.
+            util.VaultFileWatcher.getInstance().start();
+            Runtime.getRuntime().addShutdownHook(new Thread(util.VaultFileWatcher.getInstance()::stop));
+
             Parent root = loadLauncherView();
 
             Scene scene = WindowUtils.makeGlassWindow(primaryStage, root, WINDOW_TITLE);

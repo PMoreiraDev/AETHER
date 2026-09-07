@@ -1,5 +1,6 @@
 package controller;
 
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -9,7 +10,6 @@ import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
@@ -26,6 +26,7 @@ import session.UserSession;
 import util.Navigator;
 import util.OllamaService;
 import util.StyleUtils;
+import util.AetherDialogs;
 import util.SystemInfo;
 /**
  * Controlador do passo 2 do setup — configuração do Ollama
@@ -558,16 +559,9 @@ public class OllamaSetUpController {
      * @return {@code true} se o utilizador confirmou a remoção
      */
     private boolean confirmRemoval(String modelId) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Remove model");
-        confirm.setHeaderText(null);
-        confirm.setContentText("Remove \"" + modelId + "\" from disk? This action cannot be undone.");
-
-        StyleUtils.applyTo(confirm.getDialogPane());
-        confirm.getDialogPane().getStyleClass().add("custom-dialog-pane");
-
-        Optional<ButtonType> response = confirm.showAndWait();
-        return response.isPresent() && response.get() == ButtonType.OK;
+        return AetherDialogs.confirm("Remove model",
+                "Remove \"" + modelId + "\" from disk? This action cannot be undone.",
+                "Remove");
     }
 
     /**
@@ -632,6 +626,13 @@ public class OllamaSetUpController {
 
     /**
      * Reflete na interface a lista de modelos encontrada no disco.
+     * <p>
+     * Para além de atualizar a lista de instalados, reconstrói o seletor de
+     * recomendações de modo a incluir qualquer modelo já transferido que não
+     * faça parte das recomendações predefinidas — assim, um modelo mais potente
+     * que o utilizador tenha instalado manualmente fica disponível para seleção
+     * como modelo ativo, marcado como instalado.
+     * </p>
      *
      * @param models os nomes dos modelos instalados
      */
@@ -642,11 +643,37 @@ public class OllamaSetUpController {
         installedModelIds.clear();
         models.stream().map(OllamaService::normalizeModelId).forEach(installedModelIds::add);
 
-        // Redesenha as células para que as marcas "installed" fiquem atuais.
+        rebuildComboBoxItems();
+        updateDownloadButton();
+    }
+
+    /**
+     * Reconstrói os itens do seletor: recomendações predefinidas seguidas de
+     * qualquer modelo instalado que não conste das recomendações. Preserva a
+     * seleção atual do utilizador quando o modelo selecionado continua presente.
+     */
+    private void rebuildComboBoxItems() {
+        String previousSelection = modelComboBox.getValue();
+
+        List<String> items = new ArrayList<>(recommendedModels.keySet());
+        for (String installed : installedModelsListView.getItems()) {
+            String normalized = OllamaService.normalizeModelId(installed);
+            boolean alreadyListed = items.stream()
+                    .anyMatch(existing -> OllamaService.normalizeModelId(existing).equals(normalized));
+            if (!alreadyListed) {
+                items.add(installed);
+            }
+        }
+
+        modelComboBox.setItems(FXCollections.observableArrayList(items));
         modelComboBox.setButtonCell(createModelCell());
         modelComboBox.setCellFactory(listView -> createModelCell());
-        selectSuggestedModel();
-        updateDownloadButton();
+
+        if (previousSelection != null && items.contains(previousSelection)) {
+            modelComboBox.getSelectionModel().select(previousSelection);
+        } else {
+            selectSuggestedModel();
+        }
     }
 
     /**

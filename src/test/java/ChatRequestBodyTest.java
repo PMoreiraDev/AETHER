@@ -76,4 +76,26 @@ class ChatRequestBodyTest {
         assertTrue(body.contains("\\\"olá\\\""),
                 "embedded quotes must be escaped in the JSON body");
     }
+
+    /**
+     * Root-cause regression: the JSON extraction request MUST include an explicit
+     * options.num_predict. Without it, Ollama applies its default (historically
+     * 128 tokens), truncating the JSON after 1-2 entities — so only the first
+     * entities (usually PERSON) reached the parser.
+     */
+    @Test
+    void extractionBodyIncludesGenerousNumPredict() {
+        String base = OllamaService.buildChatRequestBody("qwen2.5:7b",
+                List.of(new ChatMessage("user", "nota")), null);
+        String body = OllamaService.applyExtractionOptions(base, true);
+
+        assertTrue(body.contains("\"stream\":false"),
+                "extraction must be non-streaming: " + body);
+        assertTrue(body.contains("\"format\":\"json\""),
+                "json format must be forced: " + body);
+        assertTrue(body.contains("\"num_predict\":8192"),
+                "num_predict must be generous to avoid truncation: " + body);
+        assertTrue(body.contains("\"temperature\":0.1"),
+                "low temperature for structured extraction: " + body);
+    }
 }

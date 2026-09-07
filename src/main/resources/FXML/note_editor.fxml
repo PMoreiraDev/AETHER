@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.TextFlow?>
+
+<!-- AETHER — Note Editor. Experiência de escrita dedicada no shell existente.
+     Título + toolbar de markdown + toggle Edit/Preview + autosave + feedback
+     assíncrono da IA. Reutiliza o design system (.note-editor-*, .aether-btn). -->
+<VBox fx:id="root" styleClass="note-editor-root, dash-view-root" xmlns="http://javafx.com/javafx/21.0.6"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="controller.NoteEditorController" spacing="0">
+
+    <!-- Header: back + title field + mode toggle -->
+    <HBox styleClass="note-editor-header">
+        <Button fx:id="backButton" text="%notes.editor.back" styleClass="note-back-btn" onAction="#handleBack"/>
+        <TextField fx:id="titleField" styleClass="note-title-field" promptText="%notes.editor.titlePlaceholder" HBox.hgrow="ALWAYS"/>
+        <HBox styleClass="note-mode-toggle">
+            <ToggleButton fx:id="editModeBtn" text="%notes.editor.edit" styleClass="note-mode-btn" onAction="#showEdit"/>
+            <ToggleButton fx:id="previewModeBtn" text="%notes.editor.preview" styleClass="note-mode-btn" onAction="#showPreview"/>
+        </HBox>
+    </HBox>
+
+    <!-- Toolbar de markdown -->
+    <HBox fx:id="toolbar" styleClass="note-toolbar" style="-fx-padding: 5 34 5 34;">
+        <Button text="B" styleClass="note-toolbar-btn" onAction="#insertBold"/>
+        <Button text="I" styleClass="note-toolbar-btn" onAction="#insertItalic"/>
+        <Label text="|" styleClass="note-toolbar-sep"/>
+        <Button text="H1" styleClass="note-toolbar-btn" onAction="#insertH1"/>
+        <Button text="H2" styleClass="note-toolbar-btn" onAction="#insertH2"/>
+        <Label text="|" styleClass="note-toolbar-sep"/>
+        <Button text="• List" styleClass="note-toolbar-btn" onAction="#insertBullet"/>
+        <Button text="1. List" styleClass="note-toolbar-btn" onAction="#insertNumbered"/>
+        <Button text="☐ Check" styleClass="note-toolbar-btn" onAction="#insertChecklist"/>
+        <Label text="|" styleClass="note-toolbar-sep"/>
+        <Button text="❝ Quote" styleClass="note-toolbar-btn" onAction="#insertQuote"/>
+        <Button text="&lt;/&gt;" styleClass="note-toolbar-btn" onAction="#insertCode"/>
+        <Button text="Link" styleClass="note-toolbar-btn" onAction="#insertLink"/>
+        <Button text="---" styleClass="note-toolbar-btn" onAction="#insertDivider"/>
+    </HBox>
+
+    <!-- Área de edição / pré-visualização (sobreposta, trocada pelo toggle) -->
+    <StackPane fx:id="editorStack" VBox.vgrow="ALWAYS" style="-fx-padding: 0;">
+        <TextArea fx:id="bodyArea" styleClass="note-editor-area"
+                  promptText="%notes.editor.bodyPlaceholder" wrapText="true"/>
+        <VBox fx:id="previewFlow" styleClass="note-preview" visible="false"/>
+    </StackPane>
+
+    <!-- Footer: save state + IA banner + Save button -->
+    <VBox styleClass="note-footer" spacing="8">
+        <HBox fx:id="aiBanner" styleClass="ai-understanding" visible="false" managed="false">
+            <Label fx:id="aiBannerIcon" text="✦" styleClass="ai-understanding-icon"/>
+            <Label fx:id="aiBannerText" styleClass="ai-understanding-text"/>
+        </HBox>
+        <HBox spacing="12" alignment="CENTER_LEFT">
+            <Label fx:id="saveStateLabel" styleClass="save-state" text="%notes.editor.unsaved"/>
+            <HBox HBox.hgrow="ALWAYS" style="-fx-min-width: 8;"/>
+            <Button fx:id="saveButton" text="%notes.editor.save" styleClass="aether-btn aether-btn-primary" onAction="#handleSave"/>
+        </HBox>
+    </VBox>
+</VBox>

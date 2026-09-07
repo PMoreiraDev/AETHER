@@ -56,7 +56,13 @@ public final class NoteService {
      *
      * @param text o texto da nota
      * @return resumo do que foi extraído, ou uma mensagem de confirmação
+     * @deprecated Cumpre o fluxo proibido NOTE → AI → VAULT: cria stubs de
+     * Pessoa/Projeto diretamente no vault como consequência da análise de
+     * uma nota, sem aprovação do utilizador. Não deve ser usado. Guarda a
+     * nota com {@link #persistOnly(String)} e propõe entidades via
+     * {@link ai.NoteAnalysisService}; só o utilizador as aceita.
      */
+    @Deprecated
     public static String processAndPersist(String text) {
         String trimmed = text == null ? "" : text.trim();
         if (trimmed.isBlank()) {
@@ -116,5 +122,51 @@ public final class NoteService {
         }
 
         return parsed.getSummary();
+    }
+
+    /**
+     * Persiste apenas a nota, <b>sem</b> extração automática de entidades.
+     * <p>
+     * A nota é conteúdo da autoria do utilizador — guardá-la no vault é
+     * legítimo e imediato. O que é proibido é a IA transformar
+     * silenciosamente a informação da nota em entidades confirmadas (NOTE →
+     * AI → VAULT). A análise e a extração de entidades passam a ser uma
+     * <i>proposta</i> apresentada ao utilizador ({@link ai.NoteAnalysisService}),
+     * que decide se aceita ou rejeita antes de qualquer escrita no vault.
+     * </p>
+     *
+     * @param text o texto da nota
+     * @return a nota persistida, ou {@code null} se o texto for vazio
+     */
+    public static Note persistOnly(String text) {
+        String trimmed = text == null ? "" : text.trim();
+        if (trimmed.isBlank()) {
+            return null;
+        }
+        Note note = new Note();
+        note.setContent(trimmed);
+        VaultManager.saveNote(note, trimmed);
+        return note;
+    }
+
+    /**
+     * Persiste uma nota já construída (com título e conteúdo definidos pelo
+     * editor). Ao contrário de {@link #persistOnly(String)}, preserva o título
+     * explícito definido pelo utilizador. Usado pelo editor de notas.
+     *
+     * @param note a nota a persistir
+     * @return a nota persistida, ou {@code null} se o conteúdo for vazio
+     */
+    public static Note persist(Note note) {
+        if (note == null) {
+            return null;
+        }
+        String body = note.getContent() == null ? "" : note.getContent().trim();
+        String title = note.getTitle() == null ? "" : note.getTitle().trim();
+        if (body.isBlank() && title.isBlank()) {
+            return null;
+        }
+        VaultManager.saveNote(note, null);
+        return note;
     }
 }

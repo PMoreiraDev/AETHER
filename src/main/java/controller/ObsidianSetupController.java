@@ -77,9 +77,10 @@ public class ObsidianSetupController implements Initializable {
 
         updateStatus("Checking Obsidian installation...", "pending");
         checkObsidianInstallation();
-        // Cria o vault automaticamente e mostra logo o caminho, para o
-        // utilizador saber onde o AETHER guarda os dados — mesmo que não
-        // clique em "Create Vault". A criação é idempotente.
+        // Deteta se já existe um vault válido configurado. Se sim, mostra-o
+        // como "Vault atual" e permite terminar de imediato — em vez de se
+        // comportar como se o utilizador nunca tivesse configurado um vault e
+        // aparentar criar um novo. A criação só ocorre quando não há vault.
         ensureVaultAndShowPath();
     }
 
@@ -181,12 +182,28 @@ public class ObsidianSetupController implements Initializable {
     }
 
     /**
-     * Cria o vault (idempotente) e mostra o caminho no ecrã.
+     * Deteta um vault existente ou cria a estrutura de pastas (idempotente).
      * <p>
-     * Corre em segundo plano para não bloquear a interface.
+     * Primeiro verifica se já existe um vault válido e configurado. Se existir,
+     * mostra-o como "Vault atual" e ativa o botão de terminar — o utilizador
+     * que já tem configuração não é obrigado a "criar" nada de novo. Só cria
+     * a estrutura de pastas quando ainda não existe nenhum vault.
      * </p>
      */
     private void ensureVaultAndShowPath() {
+        if (VaultManager.isVaultInitialized()) {
+            vaultCreated = true;
+            showVaultPath(true);
+            updateStatus("Vault already configured.", "success");
+            if (finishButton != null) {
+                finishButton.setDisable(false);
+            }
+            if (createVaultButton != null) {
+                createVaultButton.setText("Verify Vault");
+            }
+            return;
+        }
+
         Task<Boolean> createTask = new Task<>() {
             @Override
             protected Boolean call() {
@@ -197,7 +214,7 @@ public class ObsidianSetupController implements Initializable {
         createTask.setOnSucceeded(e -> {
             if (Boolean.TRUE.equals(createTask.getValue())) {
                 vaultCreated = true;
-                showVaultPath();
+                showVaultPath(false);
                 if (finishButton != null) {
                     finishButton.setDisable(false);
                 }
@@ -217,10 +234,13 @@ public class ObsidianSetupController implements Initializable {
      * no layout e o caminho não aparece — este era o bug que fazia o caminho
      * do vault nunca ser visível.
      * </p>
+     *
+     * @param alreadyConfigured {@code true} se o vault já existia e está configurado
      */
-    private void showVaultPath() {
+    private void showVaultPath(boolean alreadyConfigured) {
         Path vaultPath = VaultManager.getVaultPath();
-        vaultPathLabel.setText("Vault created at: " + vaultPath.toString());
+        vaultPathLabel.setText((alreadyConfigured ? "Current vault: " : "Vault created at: ")
+                + vaultPath.toString());
         vaultPathLabel.setVisible(true);
         vaultPathLabel.setManaged(true);
     }
@@ -244,7 +264,7 @@ public class ObsidianSetupController implements Initializable {
             boolean success = createTask.getValue();
             if (success) {
                 vaultCreated = true;
-                showVaultPath();
+                showVaultPath(false);
                 updateStatus("AETHER vault created successfully!", "success");
                 finishButton.setDisable(false);
             } else {

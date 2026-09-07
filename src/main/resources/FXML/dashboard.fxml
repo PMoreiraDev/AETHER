@@ -20,6 +20,8 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.BorderPane?>
@@ -63,7 +65,11 @@
 
                     <Region HBox.hgrow="ALWAYS"/>
 
-                    <Button text="+ Add note" styleClass="dash-add-note-btn" onAction="#handleAddNote"/>
+                    <Button text="%shell.addNote" styleClass="dash-add-note-btn" onAction="#handleAddNote"/>
+
+                    <TextField fx:id="searchField" promptText="%shell.searchPlaceholder"
+                               styleClass="dash-search-field"
+                               prefWidth="220" onAction="#handleSearch"/>
 
                     <Button styleClass="dash-icon-btn" onAction="#handleSearch">
                         <graphic>
@@ -73,7 +79,10 @@
 
                     <Button styleClass="dash-icon-btn" onAction="#handleNotifications">
                         <graphic>
-                            <Label text="🔔" styleClass="dash-icon-emoji"/>
+                            <StackPane>
+                                <Label text="🔔" styleClass="dash-icon-emoji"/>
+                                <Label fx:id="proposalBadgeLabel" text="0" visible="false" managed="false" styleClass="dash-notification-badge" StackPane.alignment="TOP_RIGHT"/>
+                            </StackPane>
                         </graphic>
                     </Button>
                 </children>
@@ -137,14 +146,14 @@
                             <Insets top="16" left="2" right="2"/>
                         </padding>
                         <children>
-                            <Button fx:id="navDashboard" text="Dashboard" styleClass="dash-nav-item, dash-nav-item-active" onAction="#handleNavDashboard" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navAetherAI" text="AETHER AI" styleClass="dash-nav-item" onAction="#handleNavAetherAI" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navPeople" text="People" styleClass="dash-nav-item" onAction="#handleNavPeople" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navProjects" text="Projects" styleClass="dash-nav-item" onAction="#handleNavProjects" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navEvents" text="Events" styleClass="dash-nav-item" onAction="#handleNavEvents" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navTasks" text="Tasks" styleClass="dash-nav-item" onAction="#handleNavTasks" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navNotes" text="Notes" styleClass="dash-nav-item" onAction="#handleNavNotes" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
-                            <Button fx:id="navSettings" text="Settings" styleClass="dash-nav-item" onAction="#handleNavSettings" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navDashboard" text="%nav.dashboard" styleClass="dash-nav-item, dash-nav-item-active" onAction="#handleNavDashboard" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navAetherAI" text="%nav.aetherAI" styleClass="dash-nav-item" onAction="#handleNavAetherAI" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navPeople" text="%nav.people" styleClass="dash-nav-item" onAction="#handleNavPeople" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navProjects" text="%nav.projects" styleClass="dash-nav-item" onAction="#handleNavProjects" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navEvents" text="%nav.events" styleClass="dash-nav-item" onAction="#handleNavEvents" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navTasks" text="%nav.tasks" styleClass="dash-nav-item" onAction="#handleNavTasks" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navNotes" text="%nav.notes" styleClass="dash-nav-item" onAction="#handleNavNotes" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
+                            <Button fx:id="navSettings" text="%nav.settings" styleClass="dash-nav-item" onAction="#handleNavSettings" maxWidth="Infinity" alignment="BASELINE_LEFT"/>
                         </children>
                     </VBox>
 

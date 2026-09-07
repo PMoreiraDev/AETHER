@@ -13,6 +13,14 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import java.util.List;
+import java.util.ArrayList;
+import javafx.geometry.Insets;
+import javafx.scene.control.TextField;
+import javafx.scene.control.ListView;
+import javafx.scene.control.ListCell;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
 import javafx.scene.shape.Circle;
 import session.UserSession;
 import util.AetherDialogs;
@@ -20,6 +28,8 @@ import util.AvatarImages;
 import util.NoteService;
 import util.OllamaService;
 import util.StyleUtils;
+import util.VaultRefreshBus;
+import util.I18n;
 
 /**
  * Controlador do shell do AETHER ({@code dashboard.fxml}).
@@ -81,6 +91,7 @@ public class DashboardController implements Initializable {
     private static final String EVENTS_VIEW = "/FXML/events_view.fxml";
     private static final String TASKS_VIEW = "/FXML/tasks_view.fxml";
     private static final String NOTES_VIEW = "/FXML/notes_view.fxml";
+    private static final String NOTE_EDITOR_VIEW = "/FXML/note_editor.fxml";
 
     // ------------------------------------------------------------------
     // FXML — Shell
@@ -105,7 +116,9 @@ public class DashboardController implements Initializable {
     @FXML private Button navTasks;
     @FXML private Button navNotes;
     @FXML private Button navSettings;
+    @FXML private TextField searchField;
     @FXML private VBox userProfileCard;
+    @FXML private Label proposalBadgeLabel;
 
     /** Última vista carregada, para poder refrescá-la após criar uma nota. */
     private String lastViewPath;
@@ -128,7 +141,51 @@ public class DashboardController implements Initializable {
         bindBackgroundSize();
         loadUserProfile();
         loadModelInfo();
+        registerKeyboardShortcuts();
         showDashboardView();
+        refreshProposalBadge();
+        VaultRefreshBus.subscribe(event -> Platform.runLater(this::refreshProposalBadge));
+        // Sincronização inicial da pasta User/ do vault (spec #12): garante
+        // que o vault reflete o perfil carregado do SQLite logo no arranque.
+        // Thread daemon — não bloqueia o arranque da UI.
+        Thread userVaultSync = new Thread(() -> {
+            try {
+                persistence.VaultManager.initializeVault();
+                persistence.UserVaultSync.syncProfile(
+                        session.UserSession.getInstance().getUserProfile(), "APP_START");
+            } catch (RuntimeException ex) {
+                LOGGER.warning("Sincronização inicial do vault do utilizador (best-effort): "
+                        + (ex.getMessage() != null ? ex.getMessage() : "erro desconhecido"));
+            }
+        }, "aether-user-vault-sync");
+        userVaultSync.setDaemon(true);
+        userVaultSync.start();
+    }
+
+    /**
+     * Atalhos de teclado globais do shell: Ctrl+N nova nota, Ctrl+S guardar
+     * (reencaminhado para o editor ativo, se houver), Ctrl+K pesquisa, Esc
+     * fecha diálogos/popups de pesquisa.
+     */
+    private void registerKeyboardShortcuts() {
+        if (rootPane == null || rootPane.getScene() == null) {
+            // A cena ainda não está pronta; tenta novamente quando a raiz for mostrada.
+            Platform.runLater(this::registerKeyboardShortcuts);
+            return;
+        }
+        javafx.scene.Scene scene = rootPane.getScene();
+        scene.getAccelerators().put(
+                new javafx.scene.input.KeyCodeCombination(javafx.scene.input.KeyCode.N,
+                        javafx.scene.input.KeyCombination.CONTROL_DOWN),
+                () -> handleAddNote());
+        scene.getAccelerators().put(
+                new javafx.scene.input.KeyCodeCombination(javafx.scene.input.KeyCode.K,
+                        javafx.scene.input.KeyCombination.CONTROL_DOWN),
+                () -> handleSearch());
+        scene.getAccelerators().put(
+                new javafx.scene.input.KeyCodeCombination(javafx.scene.input.KeyCode.S,
+                        javafx.scene.input.KeyCombination.CONTROL_DOWN),
+                () -> controller.NoteEditorController.saveActive());
     }
 
     // ------------------------------------------------------------------
@@ -232,11 +289,11 @@ public class DashboardController implements Initializable {
         String modelId = session.getAppSettings().getActiveModelId();
 
         if (modelId != null && !modelId.isBlank()) {
-            modelLabel.setText("Model: " + modelId);
-            modelStatusDot.getStyleClass().setAll("indicador-pendente");
+            modelLabel.setText(modelId);
+            modelStatusDot.getStyleClass().setAll("indicador-ok");
             warmUpEngine();
         } else {
-            modelLabel.setText("No model");
+            modelLabel.setText(I18n.tr("shell.model.none"));
             modelStatusDot.getStyleClass().setAll("indicador-pendente");
         }
     }
@@ -248,7 +305,7 @@ public class DashboardController implements Initializable {
      */
     private void refreshModelLabel() {
         String modelId = UserSession.getInstance().getAppSettings().getActiveModelId();
-        modelLabel.setText(modelId != null && !modelId.isBlank() ? "Model: " + modelId : "No model");
+        modelLabel.setText(modelId != null && !modelId.isBlank() ? modelId : I18n.tr("shell.model.none"));
     }
 
     /**
@@ -314,7 +371,7 @@ public class DashboardController implements Initializable {
                 LOGGER.severe(() -> "FXML não encontrado: " + fxmlPath);
                 return;
             }
-            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(fxmlUrl);
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(fxmlUrl, util.I18n.getBundle());
             var view = (javafx.scene.Node) loader.load();
             contentArea.getChildren().setAll(view);
             this.lastViewPath = fxmlPath;
@@ -363,16 +420,16 @@ public class DashboardController implements Initializable {
     private void showComingSoon(String name) {
         var placeholder = new javafx.scene.layout.VBox();
         placeholder.setAlignment(javafx.geometry.Pos.CENTER);
-        placeholder.setStyle("-fx-background-color: transparent;");
+        placeholder.getStyleClass().add("dash-coming-soon");
 
         var icon = new Label("🚧");
-        icon.setStyle("-fx-font-size: 48px;");
+        icon.getStyleClass().add("dash-coming-soon-icon");
 
         var title = new Label(name + " is coming soon");
-        title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #e2e8f0;");
+        title.getStyleClass().add("dash-coming-soon-title");
 
-        var hint = new Label("This section is still being built. The dashboard is your base.");
-        hint.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748b;");
+        var hint = new Label(I18n.tr("dashboard.section.comingSoon"));
+        hint.getStyleClass().add("dash-coming-soon-hint");
 
         placeholder.getChildren().addAll(icon, title, hint);
         placeholder.setSpacing(12);
@@ -414,6 +471,11 @@ public class DashboardController implements Initializable {
     /**
      * Handler do botão Events na sidebar.
      */
+    /** Navigates to the existing Events view from child controllers. */
+    public void showEvents() { loadView(EVENTS_VIEW, navEvents); }
+    /** Navigates to the existing Tasks view from child controllers. */
+    public void showTasks() { loadView(TASKS_VIEW, navTasks); }
+
     @FXML private void handleNavEvents() {
         loadView(EVENTS_VIEW, navEvents);
         rightArea.getChildren().clear();
@@ -431,6 +493,11 @@ public class DashboardController implements Initializable {
      * Handler do botão Notes na sidebar.
      */
     @FXML private void handleNavNotes() {
+        showNotesView();
+    }
+
+    /** Carrega a vista de Notas no contentArea (público para o editor voltar). */
+    public void showNotesView() {
         loadView(NOTES_VIEW, navNotes);
         rightArea.getChildren().clear();
     }
@@ -476,44 +543,229 @@ public class DashboardController implements Initializable {
     /**
      * Handler do botão "+ Add note" no header.
      * <p>
-     * Abre o modal de nota partilhado ({@link AetherDialogs#showAddNoteDialog()}),
-     * persiste a nota e processa-a em segundo plano através do {@link NoteService}
-     * (cria pessoas/projetos em falta e adiciona wikilinks), e depois refresca a
-     * vista atual para mostrar os dados novos.
+     * Abre o modal de nota partilhado, persiste a nota (sem extração automática)
+     * e refresca a vista atual. A análise da nota — extração de entidades,
+     * relações, etc. — é uma <i>proposta</i> que o utilizador aprova na vista de
+     * Notas ("Analisar com IA"). A IA nunca escreve no vault como consequência
+     * direta da análise de uma nota.
      * </p>
      */
     @FXML private void handleAddNote() {
-        AetherDialogs.showAddNoteDialog().ifPresent(text -> {
-            Task<String> task = new Task<>() {
-                @Override
-                protected String call() {
-                    return NoteService.processAndPersist(text);
-                }
-            };
-            task.setOnSucceeded(e -> Platform.runLater(() -> {
-                LOGGER.info(() -> "Note saved: " + task.getValue());
-                reloadCurrentView();
-            }));
-            task.setOnFailed(e -> Platform.runLater(() ->
-                    LOGGER.severe(() -> "Note processing failed: "
-                            + (task.getException() != null ? task.getException().getMessage() : "unknown"))));
-            Thread t = new Thread(task, "aether-note-save");
-            t.setDaemon(true);
-            t.start();
-        });
+        openNoteEditor(new domain.entities.Note());
+    }
+
+    /**
+     * Abre o editor de notas dedicado no {@code contentArea} para criar ou
+     * editar uma nota. Substitui o modal antigo por uma experiência de escrita
+     * real: título, toolbar de markdown, pré-visualização, autosave e feedback
+     * assíncrono da IA após guardar.
+     *
+     * @param note a nota a editar (nova se sem id)
+     */
+    public void openNoteEditor(domain.entities.Note note) {
+        util.NoteEditorContext.setPending(note);
+        loadView(NOTE_EDITOR_VIEW, navNotes);
     }
 
     /**
      * Handler do botão de pesquisa no header.
      */
     @FXML private void handleSearch() {
-        LOGGER.info("Action: Search");
+        String q = searchField == null ? "" : searchField.getText().trim();
+        if (q.isBlank()) {
+            LOGGER.info("Action: Search (vazio)");
+            return;
+        }
+        LOGGER.info("Action: Search: " + q);
+        showSearchLoading(q);
+    }
+
+    /** Shows an immediate loading state and performs the global search off the FX thread. */
+    private void showSearchLoading(String query) {
+        Stage popup = new Stage();
+        popup.setTitle(I18n.tr("search.title", query));
+        popup.initModality(javafx.stage.Modality.NONE);
+        popup.initOwner(searchField.getScene().getWindow());
+
+        VBox root = new VBox(10);
+        root.setPadding(new Insets(14));
+        root.getStyleClass().add("search-popup");
+        root.setPrefWidth(520);
+        Label title = new Label(I18n.tr("search.loading"));
+        title.getStyleClass().add("search-popup-title");
+        root.getChildren().add(title);
+        popup.setScene(new Scene(root));
+        popup.getScene().getStylesheets().add(getClass().getResource("/Style.css").toExternalForm());
+        popup.show();
+
+        Task<util.GlobalSearchService.SearchResult> searchTask = new Task<>() {
+            @Override protected util.GlobalSearchService.SearchResult call() {
+                return util.GlobalSearchService.search(query);
+            }
+        };
+        searchTask.setOnSucceeded(e -> {
+            if (popup.isShowing()) {
+                popup.close();
+                showSearchResults(query, searchTask.getValue());
+            }
+        });
+        searchTask.setOnFailed(e -> {
+            if (popup.isShowing()) popup.close();
+            AetherDialogs.info(I18n.tr("search.error"));
+        });
+        Thread thread = new Thread(searchTask, "aether-global-search");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     /**
-     * Handler do botão de notificações no header.
+     * Mostra os resultados da pesquisa numa janela popup sobreposta. O clique
+     * num resultado abre a secção correspondente (Pessoas, Projetos, etc.).
+     * A pesquisa cobre todo o vault via o índice normalizado
+     * (insensível a diacríticos e capitalização).
+     */
+    private void showSearchResults(String query, util.GlobalSearchService.SearchResult result) {
+        Stage popup = new Stage();
+        popup.setTitle(I18n.tr("search.title", query));
+        popup.initModality(javafx.stage.Modality.NONE);
+        popup.initOwner(searchField.getScene().getWindow());
+
+        VBox root = new VBox(8);
+        root.setPadding(new Insets(14));
+        root.getStyleClass().add("search-popup");
+        root.setPrefWidth(520);
+
+        Label title = new Label(result.isEmpty()
+                ? I18n.tr("search.noResults")
+                : I18n.tr("search.results", result.total()));
+        title.getStyleClass().add("search-popup-title");
+        root.getChildren().add(title);
+
+        // Grouped results keep the existing navigation while making the search state
+        // explicit for People, Projects, Tasks, Events, Notes and Documents.
+        VBox resultsBox = new VBox(8);
+        addSearchGroup(resultsBox, I18n.tr("search.people"), result.people().stream().map(p -> "👤  " + p.getName()).toList(), PEOPLE_VIEW, popup);
+        addSearchGroup(resultsBox, I18n.tr("search.projects"), result.projects().stream().map(p -> "▣  " + p.getName()).toList(), PROJECTS_VIEW, popup);
+        addSearchGroup(resultsBox, I18n.tr("search.tasks"), result.tasks().stream().map(t -> "✓  " + t.getTitle()).toList(), TASKS_VIEW, popup);
+        addSearchGroup(resultsBox, I18n.tr("search.events"), result.events().stream().map(e -> "📅  " + e.getTitle()).toList(), EVENTS_VIEW, popup);
+        addSearchGroup(resultsBox, I18n.tr("search.notes"), result.notes().stream().map(n -> "📝  " + n.getContent().lines().findFirst().orElse(I18n.tr("notes.untitled"))).toList(), NOTES_VIEW, popup);
+        addSearchGroup(resultsBox, I18n.tr("search.documents"), result.documents().stream().map(d -> "📄  " + d.getOriginalFilename()).toList(), PROJECTS_VIEW, popup);
+        javafx.scene.control.ScrollPane resultsScroll = new javafx.scene.control.ScrollPane(resultsBox);
+        resultsScroll.setFitToWidth(true);
+        resultsScroll.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+        resultsScroll.setPrefHeight(360);
+        resultsScroll.getStyleClass().add("search-results-scroll");
+        root.getChildren().add(resultsScroll);
+
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add(getClass().getResource("/Style.css").toExternalForm());
+        popup.setScene(scene);
+        popup.show();
+    }
+
+    private void addSearchGroup(VBox parent, String title, List<String> labels, String viewPath, Stage popup) {
+        if (labels == null || labels.isEmpty()) return;
+        Label heading = new Label(title);
+        heading.getStyleClass().add("search-group-title");
+        parent.getChildren().add(heading);
+        for (String text : labels) {
+            Button item = new Button(text);
+            item.setMaxWidth(Double.MAX_VALUE);
+            item.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            item.getStyleClass().add("search-result-cell");
+            item.setOnAction(ev -> { loadView(viewPath, null); popup.close(); });
+            parent.getChildren().add(item);
+        }
+    }
+
+    /** Item de resultado de pesquisa (texto de apresentação + vista de destino). */
+    private record ResultItem(String display, String viewPath) {}
+
+    /** Updates the notification badge from real persisted pending AI proposals. */
+    public void refreshProposalBadge() {
+        if (proposalBadgeLabel == null) return;
+        int count = ai.ProposalStore.getInstance().pendingCount();
+        proposalBadgeLabel.setText(count > 99 ? "99+" : String.valueOf(count));
+        proposalBadgeLabel.setVisible(count > 0);
+        proposalBadgeLabel.setManaged(count > 0);
+    }
+
+    /**
+     * Handler do botão de notificações no header. Abre um painel com as
+     * notificações pendentes (Suggested Updates de perfil detetadas pela IA
+     * nas conversas). Cada item tem um botão "Rever" que leva ao Profile.
+     * Reutiliza o ProposalStore existente — não cria um segundo sistema.
      */
     @FXML private void handleNotifications() {
         LOGGER.info("Action: Notifications");
+        List<ai.ProposalStore.Snapshot> pending = ai.ProposalStore.getInstance().pending();
+        if (pending == null || pending.isEmpty()) {
+            AetherDialogs.info(I18n.tr("notifications.none"));
+            refreshProposalBadge();
+            return;
+        }
+        showNotificationsPanel(pending);
+        refreshProposalBadge();
+    }
+
+    /** Painel de notificações (dark glass) com a lista de Suggested Updates. */
+    private void showNotificationsPanel(List<ai.ProposalStore.Snapshot> pending) {
+        javafx.stage.Stage stage = new Stage();
+        stage.setTitle(I18n.tr("notifications.title"));
+        stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+
+        VBox root = new VBox(10);
+        root.getStyleClass().add("notif-panel");
+        root.setPadding(new Insets(16));
+
+        Label header = new Label(I18n.tr("notifications.title"));
+        header.getStyleClass().add("notif-panel-header");
+        root.getChildren().add(header);
+
+        // Lista com scroll — suporta muitas notificações sem truncar.
+        VBox list = new VBox(10);
+        for (ai.ProposalStore.Snapshot s : pending) {
+            VBox card = new VBox(4);
+            card.getStyleClass().add("notif-card");
+            Label title = new Label(I18n.tr("notifications.userContext"));
+            title.getStyleClass().add("notif-card-title");
+            Label desc = new Label(I18n.tr("notifications.detectedInfo"));
+            desc.getStyleClass().add("notif-card-desc");
+            desc.setWrapText(true);
+            // Resumo dos campos sugeridos com labels legíveis (não chaves técnicas).
+            StringBuilder fields = new StringBuilder();
+            if (s.fields != null) {
+                s.fields.forEach((k, v) -> fields.append(util.ProfileFieldLabels.label(k))
+                        .append(" → ").append(v).append("\n"));
+            }
+            Label detail = new Label(fields.toString().trim());
+            detail.getStyleClass().add("notif-card-detail");
+            detail.setWrapText(true);
+
+            Button review = new Button(I18n.tr("notifications.review"));
+            review.getStyleClass().addAll("proposal-btn", "proposal-accept-btn");
+            review.setOnAction(e -> {
+                stage.close();
+                loadView(PROFILE_VIEW, null);
+            });
+            card.getChildren().addAll(title, desc, detail, review);
+            list.getChildren().add(card);
+        }
+
+        javafx.scene.control.ScrollPane scroll = new javafx.scene.control.ScrollPane(list);
+        scroll.getStyleClass().add("notif-scroll");
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(true);
+        scroll.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setPrefViewportHeight(400);
+        root.getChildren().add(scroll);
+
+        Scene scene = new Scene(root, 460, 520);
+        scene.getStylesheets().add(getClass().getResource("/Style.css").toExternalForm());
+        stage.setScene(scene);
+        stage.setResizable(false);
+        stage.setOnCloseRequest(e -> refreshProposalBadge());
+        stage.show();
     }
 }

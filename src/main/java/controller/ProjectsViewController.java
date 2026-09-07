@@ -2,6 +2,9 @@ package controller;
 
 import java.net.URL;
 import java.time.LocalDateTime;
+import java.awt.Desktop;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
@@ -27,9 +30,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import domain.entities.Project;
 import domain.entities.ProjectStatus;
 import persistence.VaultManager;
+import util.I18n;
 import util.AetherDialogs;
 
 /**
@@ -79,9 +84,10 @@ public class ProjectsViewController implements Initializable {
         var projects = VaultManager.listProjects();
 
         if (projects.isEmpty()) {
-            Label empty = new Label("No projects yet.");
-            empty.getStyleClass().add("dash-empty-state");
-            projectsContainer.getChildren().add(empty);
+            projectsContainer.getChildren().add(
+                    util.EmptyState.of("empty.projects.title", "empty.projects.hint")
+                            .cta("empty.projects.cta", () -> handleAddProject())
+                            .build());
             return;
         }
 
@@ -256,6 +262,73 @@ public class ProjectsViewController implements Initializable {
         HBox relatedPicker = new HBox(10, relatedCombo, linkButton);
         relatedPicker.setAlignment(Pos.CENTER_LEFT);
 
+        // --- Local project documents ------------------------------------
+        VBox documentsBox = new VBox(8);
+        Button addDocumentButton = new Button(I18n.tr("project.documents.add"));
+        addDocumentButton.getStyleClass().addAll("botao-secundario", "button-small");
+        VBox documentList = new VBox(6);
+        documentsBox.getChildren().add(addDocumentButton);
+        documentsBox.getChildren().add(documentList);
+        // Guardado num array de 1 elemento para a lambda se poder referenciar
+        // a si própria (recalcula a lista de documentos sempre que é alterada).
+        final Runnable[] refreshHolderDocs = new Runnable[1];
+        refreshHolderDocs[0] = () -> {
+            documentList.getChildren().clear();
+            if (existing == null) {
+                Label hint = new Label(I18n.tr("project.documents.none"));
+                hint.getStyleClass().add("dash-list-item-sub");
+                documentList.getChildren().add(hint);
+                addDocumentButton.setDisable(true);
+                return;
+            }
+            addDocumentButton.setDisable(false);
+            List<domain.entities.ProjectDocument> docs = util.ProjectDocumentService.list(existing.getId());
+            if (docs.isEmpty()) {
+                Label empty = new Label(I18n.tr("project.documents.none"));
+                empty.getStyleClass().add("dash-list-item-sub");
+                documentList.getChildren().add(empty);
+                return;
+            }
+            for (domain.entities.ProjectDocument doc : docs) {
+                HBox row = new HBox(8);
+                row.setAlignment(Pos.CENTER_LEFT);
+                Label name = new Label(doc.getOriginalFilename());
+                name.getStyleClass().add("dash-list-item");
+                name.setMaxWidth(220);
+                Label meta = new Label(doc.getType() + " • " + humanSize(doc.getSize()));
+                meta.getStyleClass().add("dash-list-item-sub");
+                Region spacer = new Region();
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+                Button open = new Button(I18n.tr("project.documents.open"));
+                Button remove = new Button(I18n.tr("project.documents.remove"));
+                open.getStyleClass().add("button-small");
+                remove.getStyleClass().addAll("botao-perigo", "button-small");
+                open.setOnAction(ev -> openDocument(doc));
+                remove.setOnAction(ev -> {
+                    ev.consume();
+                    if (AetherDialogs.confirmDelete(doc.getOriginalFilename())) {
+                        try { util.ProjectDocumentService.remove(doc); refreshHolderDocs[0].run(); }
+                        catch (IOException ex) { LOGGER.warning("Could not remove document: " + ex.getMessage()); }
+                    }
+                });
+                row.getChildren().addAll(name, meta, spacer, open, remove);
+                documentList.getChildren().add(row);
+            }
+        };
+        addDocumentButton.setOnAction(ev -> {
+            if (existing == null) return;
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle(I18n.tr("project.documents.add"));
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+                    "Documents", "*.pdf", "*.doc", "*.docx", "*.txt", "*.md", "*.markdown"));
+            java.io.File selected = chooser.showOpenDialog(dialog.getOwner());
+            if (selected != null) {
+                try { util.ProjectDocumentService.add(existing.getId(), selected.toPath()); refreshHolderDocs[0].run(); }
+                catch (IOException ex) { AetherDialogs.info(I18n.tr("project.documents.failed")); }
+            }
+        });
+        refreshHolderDocs[0].run();
+
         if (existing != null) {
             nameField.setText(existing.getName());
             if (existing.getDeadline() != null) {
@@ -274,7 +347,8 @@ public class ProjectsViewController implements Initializable {
                 AetherDialogs.fieldLabel("Deadline (optional)"), deadlineDateField,
                 AetherDialogs.fieldLabel("Status"), statusCombo,
                 AetherDialogs.fieldLabel("Description"), descArea,
-                AetherDialogs.fieldLabel("Related People / Projects"), relatedPicker, relatedChips
+                AetherDialogs.fieldLabel("Related People / Projects"), relatedPicker, relatedChips,
+                AetherDialogs.fieldLabel(I18n.tr("project.documents")), documentsBox
         );
 
         ButtonType saveType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
@@ -314,6 +388,20 @@ public class ProjectsViewController implements Initializable {
      * @param name o nome ligado a remover
      * @return o texto sem a linha desse wikilink
      */
+    private static void openDocument(domain.entities.ProjectDocument document) {
+        try {
+            if (Desktop.isDesktopSupported()) Desktop.getDesktop().open(document.getPath().toFile());
+        } catch (IOException e) {
+            LOGGER.warning("Could not open document: " + e.getMessage());
+        }
+    }
+
+    private static String humanSize(long size) {
+        if (size < 1024) return size + " B";
+        if (size < 1024 * 1024) return String.format(java.util.Locale.ROOT, "%.1f KB", size / 1024.0);
+        return String.format(java.util.Locale.ROOT, "%.1f MB", size / (1024.0 * 1024.0));
+    }
+
     private static String removeWikilink(String text, String name) {
         if (text == null || text.isBlank()) {
             return text;

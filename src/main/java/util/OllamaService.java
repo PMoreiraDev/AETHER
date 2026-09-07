@@ -1,12 +1,8 @@
 package util;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -519,112 +515,264 @@ public final class OllamaService {
     }
 
     /**
-     * Lista os modelos instalados, distinguindo "nenhum modelo" de "não foi
-     * possível verificar".
+     * Lista os modelos instalados, consultando o endpoint HTTP {@code /api/tags}
+     * do Ollama e lendo apenas o campo {@code name} de cada objeto em
+     * {@code models}. Ao contrário da análise da tabela de {@code ollama list}
+     * (sensível a largura de terminal, cabeçalho, stderr misturado), o endpoint
+     * devolve JSON estruturado: só aparecem modelos realmente instalados,
+     * nunca tokens fantasmas de outras colunas.
      * <p>
-     * É esta a variante que a interface deve usar: um {@link Optional} vazio
-     * significa que a verificação falhou ou excedeu o tempo limite, o que permite
-     * mostrar um erro em vez de afirmar incorretamente que não há modelos
-     * instalados.
-     * </p>
+     * A leitura é limitada por {@link #QUICK_TASK_TIMEOUT_SECONDS}.
      *
      * @return os nomes dos modelos locais (possivelmente uma lista vazia), ou
      *         {@link Optional#empty()} se a verificação não pôde ser concluída
      */
     public static Optional<List<String>> tryGetInstalledModels() {
-        String ollamaPath = findOllamaExecutable();
-        if (ollamaPath == null) {
-            LOGGER.fine("Listagem ignorada: o Ollama não está instalado.");
+        if (!ensureServerRunning()) {
+            LOGGER.fine("Listagem ignorada: o servidor do Ollama não está disponível.");
             return Optional.empty();
         }
-
-        ProcessBuilder builder = new ProcessBuilder(ollamaPath, "list");
-        builder.redirectErrorStream(true);
-
-        Process process = null;
         try {
-            process = builder.start();
-            return readModelNames(process);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            LOGGER.warning("Listagem de modelos interrompida.");
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Falha ao listar os modelos do Ollama.", e);
-        } finally {
-            destroy(process);
-        }
-        return Optional.empty();
-    }
-
-    /**
-     * Lê os nomes dos modelos da saída de um processo, dentro do tempo limite.
-     *
-     * @param process o processo de {@code ollama list} já iniciado
-     * @return os nomes lidos, ou {@link Optional#empty()} se o tempo limite for excedido
-     * @throws InterruptedException se o fio atual for interrompido durante a espera
-     */
-    private static Optional<List<String>> readModelNames(Process process) throws InterruptedException {
-        List<String> models = Collections.synchronizedList(new ArrayList<>());
-
-        Thread reader = new Thread(() -> collectModelNames(process, models), "aether-ollama-list-reader");
-        reader.setDaemon(true);
-        reader.start();
-
-        long timeoutMillis = TimeUnit.SECONDS.toMillis(QUICK_TASK_TIMEOUT_SECONDS);
-        reader.join(timeoutMillis);
-
-        if (reader.isAlive()) {
-            LOGGER.warning(() -> "Tempo limite de " + QUICK_TASK_TIMEOUT_SECONDS
-                    + "s excedido ao listar os modelos: processo terminado.");
-            process.destroyForcibly();
-            reader.interrupt();
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(QUICK_TASK_TIMEOUT_SECONDS))
+                    .build();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/tags"))
+                    .timeout(java.time.Duration.ofSeconds(QUICK_TASK_TIMEOUT_SECONDS))
+                    .GET()
+                    .build();
+            java.net.http.HttpResponse<String> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                LOGGER.warning(() -> "Ollama /api/tags devolveu HTTP " + response.statusCode());
+                return Optional.empty();
+            }
+            List<String> models = parseModelNames(response.body());
+            LOGGER.fine(() -> "Modelos instalados (HTTP /api/tags): " + models);
+            return Optional.of(models);
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Falha ao listar os modelos do Ollama via /api/tags.", e);
             return Optional.empty();
         }
-
-        process.waitFor(QUICK_TASK_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-        synchronized (models) {
-            return Optional.of(List.copyOf(models));
-        }
     }
 
     /**
-     * Consome a saída de {@code ollama list} e acumula os nomes dos modelos.
+     * Analisa a resposta JSON de {@code /api/tags} e devolve os nomes dos
+     * modelos instalados. Lê apenas o campo {@code name} (com fallback para
+     * {@code model}) de cada objeto dentro do array {@code models}.
      * <p>
-     * Executado num fio auxiliar: eventuais falhas de leitura são registadas e
-     * nunca propagadas, porque o chamador trata a ausência de resultados.
-     * </p>
+     * Ao contrário da análise da tabela de {@code ollama list}, só são aceites
+     * nomes que pareçam identificadores válidos de modelo — tokens soltos de
+     * outras colunas ou texto de erro nunca são interpretados como modelos.
+     * É isto que elimina entradas fantasmas como um suposto modelo "as".
      *
-     * @param process o processo cuja saída deve ser lida
-     * @param models a lista onde acumular os nomes encontrados
+     * @param json o corpo da resposta de {@code /api/tags}
+     * @return os nomes dos modelos (lista vazia se nenhum ou inválido)
      */
-    private static void collectModelNames(Process process, List<String> models) {
-        try (BufferedReader input = new BufferedReader(
-                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+    static List<String> parseModelNames(String json) {
+        List<String> out = new ArrayList<>();
+        if (json == null || json.isBlank()) {
+            return out;
+        }
+        String array = extractArrayAfterKey(json, "models");
+        if (array == null) {
+            return out;
+        }
+        for (String obj : splitTopLevelObjects(array)) {
+            String raw = extractFirstStringField(obj, "name");
+            if (raw == null || raw.isBlank()) {
+                raw = extractFirstStringField(obj, "model");
+            }
+            if (raw == null || raw.isBlank()) {
+                continue;
+            }
+            final String name = raw.trim();
+            if (isValidModelName(name)) {
+                out.add(name);
+            } else {
+                LOGGER.fine(() -> "Nome de modelo ignorado (inválido): " + name);
+            }
+        }
+        return out;
+    }
 
-            String line;
-            boolean isHeader = true;
-            while ((line = input.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
+    /**
+     * Localiza o conteúdo do array JSON que se segue à chave {@code "key"}.
+     *
+     * @param json o JSON completo
+     * @param key o nome da chave cujo valor é um array
+     * @return o conteúdo entre {@code [} e {@code ]}, ou {@code null}
+     */
+    private static String extractArrayAfterKey(String json, String key) {
+        String quotedKey = "\"" + key + "\"";
+        int kidx = indexOfOutsideStrings(json, quotedKey);
+        if (kidx < 0) {
+            return null;
+        }
+        int i = kidx + quotedKey.length();
+        while (i < json.length()
+                && (json.charAt(i) == ' ' || json.charAt(i) == ':'
+                || json.charAt(i) == '\t' || json.charAt(i) == '\n'
+                || json.charAt(i) == '\r')) {
+            i++;
+        }
+        if (i >= json.length() || json.charAt(i) != '[') {
+            return null;
+        }
+        int start = i + 1;
+        int depth = 0;
+        boolean inString = false;
+        boolean escape = false;
+        for (int j = start; j < json.length(); j++) {
+            char c = json.charAt(j);
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            if (inString) {
+                if (c == '\\') escape = true;
+                else if (c == '"') inString = false;
+                continue;
+            }
+            if (c == '"') inString = true;
+            else if (c == '[') depth++;
+            else if (c == ']') {
+                if (depth == 0) {
+                    return json.substring(start, j);
                 }
-                String name = extractModelName(line);
-                if (name != null) {
-                    models.add(name);
+                depth--;
+            }
+        }
+        return null;
+    }
+
+    /** Divide o conteúdo de um array JSON em substrings de objetos de topo. */
+    private static List<String> splitTopLevelObjects(String arrayContent) {
+        List<String> out = new ArrayList<>();
+        int depth = 0;
+        boolean inString = false;
+        boolean escape = false;
+        int objStart = -1;
+        for (int i = 0; i < arrayContent.length(); i++) {
+            char c = arrayContent.charAt(i);
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            if (inString) {
+                if (c == '\\') escape = true;
+                else if (c == '"') inString = false;
+                continue;
+            }
+            if (c == '"') {
+                inString = true;
+            } else if (c == '{') {
+                if (depth == 0) objStart = i;
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0 && objStart >= 0) {
+                    out.add(arrayContent.substring(objStart, i + 1));
+                    objStart = -1;
                 }
             }
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Falha ao ler a saída de 'ollama list'.", e);
         }
+        return out;
+    }
+
+    /** Extrai o valor string do primeiro campo {@code "key":"value"} de um objeto. */
+    private static String extractFirstStringField(String obj, String key) {
+        String quotedKey = "\"" + key + "\"";
+        int kidx = indexOfOutsideStrings(obj, quotedKey);
+        if (kidx < 0) {
+            return null;
+        }
+        int i = kidx + quotedKey.length();
+        while (i < obj.length()
+                && (obj.charAt(i) == ' ' || obj.charAt(i) == ':'
+                || obj.charAt(i) == '\t' || obj.charAt(i) == '\n'
+                || obj.charAt(i) == '\r')) {
+            i++;
+        }
+        if (i >= obj.length() || obj.charAt(i) != '"') {
+            return null;
+        }
+        int start = i + 1;
+        StringBuilder sb = new StringBuilder();
+        boolean escape = false;
+        for (int j = start; j < obj.length(); j++) {
+            char c = obj.charAt(j);
+            if (escape) {
+                escape = false;
+                switch (c) {
+                    case 'n' -> sb.append('\n');
+                    case 't' -> sb.append('\t');
+                    case '"' -> sb.append('"');
+                    case '\\' -> sb.append('\\');
+                    case '/' -> sb.append('/');
+                    case 'r' -> sb.append('\r');
+                    default -> sb.append(c);
+                }
+                continue;
+            }
+            if (c == '\\') {
+                escape = true;
+            } else if (c == '"') {
+                return sb.toString();
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    /** Procura uma chave apenas fora de strings JSON. */
+    private static int indexOfOutsideStrings(String json, String quotedKey) {
+        boolean inString = false;
+        boolean escape = false;
+        for (int i = 0; i <= json.length() - quotedKey.length(); i++) {
+            char c = json.charAt(i);
+            if (escape) {
+                escape = false;
+                continue;
+            }
+            if (inString) {
+                if (c == '\\') escape = true;
+                else if (c == '"') inString = false;
+                continue;
+            }
+            if (c == '"') {
+                if (json.startsWith(quotedKey, i)) {
+                    return i;
+                }
+                inString = true;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Valida se um nome parece um identificador real de modelo do Ollama
+     * (ex.: {@code qwen2.5:14b}, {@code llama3.2:3b}). Rejeita tokens vazios,
+     * com espaços ou com caracteres estranhos provenientes de parsing acidental.
+     *
+     * @param name o nome a validar
+     * @return {@code true} se for um identificador plausível
+     */
+    static boolean isValidModelName(String name) {
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        return name.matches("^[a-zA-Z0-9][a-zA-Z0-9._\\-]*(:[a-zA-Z0-9._\\-]+)?$");
     }
 
     /**
      * Normaliza o identificador de um modelo para efeitos de comparação.
      * <p>
-     * O {@code ollama list} acrescenta a etiqueta {@code :latest} aos modelos
-     * transferidos sem versão explícita (por exemplo, {@code ollama pull mistral}
-     * aparece como {@code mistral:latest}). Sem esta normalização, o mesmo modelo
-     * seria considerado dois modelos diferentes.
+     * O Ollama acrescenta a etiqueta {@code :latest} aos modelos transferidos
+     * sem versão explícita (por exemplo, {@code ollama pull mistral} aparece como
+     * {@code mistral:latest}). Sem esta normalização, o mesmo modelo seria
+     * considerado dois modelos diferentes.
      * </p>
      *
      * @param modelId o identificador a normalizar; pode ser {@code null}
@@ -639,20 +787,6 @@ public final class OllamaService {
         return normalized.endsWith(":latest")
                 ? normalized.substring(0, normalized.length() - ":latest".length())
                 : normalized;
-    }
-
-    /**
-     * Extrai o nome do modelo de uma linha da tabela devolvida por {@code ollama list}.
-     *
-     * @param line a linha a analisar
-     * @return o nome do modelo, ou {@code null} se a linha estiver vazia
-     */
-    private static String extractModelName(String line) {
-        if (line == null || line.isBlank()) {
-            return null;
-        }
-        String[] tokens = line.trim().split("\\s+");
-        return tokens.length > 0 && !tokens[0].isEmpty() ? tokens[0] : null;
     }
 
     /**
@@ -1028,6 +1162,107 @@ public final class OllamaService {
                 + "\"messages\":[" + msgs + "],"
                 + "\"stream\":true,"
                 + "\"keep_alive\":\"" + KEEP_ALIVE + "\"}";
+    }
+
+    /**
+     * Chamada não-streaming ao /api/chat com histórico completo. Devolve a
+     * resposta completa do assistente numa só string. Usada para passagens onde
+     * é preciso obter uma resposta estruturada (ex.: extração de ações) em vez
+     * de streaming token-a-token.
+     *
+     * @param modelId  identificador do modelo Ollama
+     * @param messages histórico da conversa (user/assistant)
+     * @param system   prompt de sistema; pode ser {@code null} ou vazio
+     * @return a resposta completa, ou {@code null} se não houver resposta
+     */
+    public static String chatComplete(String modelId, List<ChatMessage> messages, String system) {
+        return chatComplete(modelId, messages, system, false);
+    }
+
+    /**
+     * Chamada não-streaming ao /api/chat com histórico completo e, opcionalmente,
+     * o formato JSON forçado ({@code "format":"json"}). Quando {@code jsonFormat}
+     * é {@code true}, pede-se ao modelo que devolva JSON válido — útil para a
+     * extração estruturada de ações. Mesmo assim, o chamador deve validar o
+     * resultado defensivamente: o modelo pode devolver JSON imperfeito.
+     *
+     * @param modelId    identificador do modelo Ollama
+     * @param messages   histórico da conversa (user/assistant)
+     * @param system     prompt de sistema; pode ser {@code null} ou vazio
+     * @param jsonFormat {@code true} para forçar {@code "format":"json"}
+     * @return a resposta completa, ou {@code null} se não houver resposta
+     */
+    /**
+     * Aplica as opções de extração estruturada ao corpo do pedido: força
+     * {@code stream:false}, adiciona {@code format:json} quando solicitado, e
+     * injeta um bloco {@code options} com {@code num_predict} generoso.
+     * <p>
+     * <b>Root cause do truncamento:</b> sem o bloco {@code options} explícito,
+     * o Ollama aplica o seu {@code num_predict} por defeito (historicamente
+     * 128 tokens em muitas versões), o que truncava o JSON após 1-2 entidades —
+     * por isso só as primeiras (geralmente PERSON) chegavam ao parser.
+     * </p>
+     */
+    public static String applyExtractionOptions(String body, boolean jsonFormat) {
+        if (body == null || body.isEmpty()) return body;
+        body = body.replace("\"stream\":true", "\"stream\":false");
+        if (jsonFormat && !body.contains("\"format\":\"json\"")) {
+            body = body.substring(0, body.length() - 1) + ",\"format\":\"json\"}";
+        }
+        String options = jsonFormat
+                ? ",\"options\":{\"num_predict\":8192,\"temperature\":0.1}"
+                : ",\"options\":{\"num_predict\":4096}";
+        if (body.endsWith("}")) {
+            body = body.substring(0, body.length() - 1) + options + "}";
+        }
+        return body;
+    }
+
+    public static String chatComplete(String modelId, List<ChatMessage> messages,
+                                      String system, boolean jsonFormat) {
+        return chatComplete(modelId, messages, system, jsonFormat, 5);
+    }
+
+    /**
+     * Variante com timeout configurável (em minutos). Útil para a análise de
+     * notas, que pode ser cancelada pelo utilizador e deve falhar mais cedo.
+     */
+    public static String chatComplete(String modelId, List<ChatMessage> messages,
+                                      String system, boolean jsonFormat, long timeoutMinutes) {
+        if (modelId == null || modelId.isBlank() || messages == null || messages.isEmpty()) {
+            return null;
+        }
+        if (!ensureServerRunning()) {
+            LOGGER.warning("Não foi possível contactar o modelo: o servidor do Ollama não está disponível.");
+            return null;
+        }
+        try {
+            String body = buildChatRequestBody(modelId, messages, system);
+            body = applyExtractionOptions(body, jsonFormat);
+            java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(10))
+                    .build();
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("http://localhost:11434/api/chat"))
+                    .timeout(java.time.Duration.ofMinutes(timeoutMinutes))
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body))
+                    .build();
+            java.net.http.HttpResponse<String> response = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                LOGGER.warning(() -> "Ollama API (chat complete) devolveu HTTP " + response.statusCode());
+                return null;
+            }
+            return extractChatContent(response.body());
+        } catch (Exception e) {
+            if (Thread.currentThread().isInterrupted()) {
+                LOGGER.info("Análise cancelada pelo utilizador (thread interrompida).");
+            } else {
+                LOGGER.log(Level.WARNING, "Falha ao comunicar com o Ollama (chat complete).", e);
+            }
+            return null;
+        }
     }
 
     /**

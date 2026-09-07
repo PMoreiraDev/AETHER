@@ -61,9 +61,10 @@ public class EventsViewController implements Initializable {
         var events = VaultManager.listEvents();
 
         if (events.isEmpty()) {
-            Label empty = new Label("No events yet.");
-            empty.getStyleClass().add("dash-empty-state");
-            eventsContainer.getChildren().add(empty);
+            eventsContainer.getChildren().add(
+                    util.EmptyState.of("empty.events.title", "empty.events.hint")
+                            .cta("empty.events.cta", () -> handleAddEvent())
+                            .build());
             return;
         }
 

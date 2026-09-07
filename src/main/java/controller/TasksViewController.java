@@ -65,9 +65,10 @@ public class TasksViewController implements Initializable {
         var tasks = VaultManager.listTasks();
 
         if (tasks.isEmpty()) {
-            Label empty = new Label("No tasks yet.");
-            empty.getStyleClass().add("dash-empty-state");
-            tasksContainer.getChildren().add(empty);
+            tasksContainer.getChildren().add(
+                    util.EmptyState.of("empty.tasks.title", "empty.tasks.hint")
+                            .cta("empty.tasks.cta", () -> handleAddTask())
+                            .build());
             return;
         }
 

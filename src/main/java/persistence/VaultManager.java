@@ -1,5 +1,8 @@
 package persistence;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import domain.entities.AetherEntity;
 import domain.entities.ContextEntityType;
 import domain.entities.Event;
@@ -48,6 +51,8 @@ import java.util.stream.Stream;
  * @version 1.0
  */
 public final class VaultManager {
+    private static final Logger LOGGER = Logger.getLogger(VaultManager.class.getName());
+
 
     /** Nome da pasta raiz do vault. */
     private static final String VAULT_FOLDER = "AETHER-Vault";
@@ -128,6 +133,17 @@ public final class VaultManager {
             Files.createDirectories(vault.resolve(TASKS_DIR));
             Files.createDirectories(vault.resolve(NOTES_DIR));
             Files.createDirectories(vault.resolve(PROJECTS_DIR));
+            // Pasta do UTILIZADOR (spec #14): ficheiros do perfil em markdown,
+            // sincronizados pelo UserVaultSync com semântica merge. Não entra
+            // em isVaultInitialized() para manter retrocompatibilidade com
+            // vaults existentes (é criada aqui e re-sincronizada no arranque).
+            Files.createDirectories(vault.resolve(UserVaultSync.USER_DIR));
+            // Pastas reservadas da estrutura canónica do vault (spec #14):
+            // ainda sem CRUD de domínio dedicado, mas a estrutura existe desde
+            // o arranque para o utilizador as povoar manualmente no Obsidian.
+            Files.createDirectories(vault.resolve("Organizations"));
+            Files.createDirectories(vault.resolve("Documents"));
+            Files.createDirectories(vault.resolve("Relationships"));
             return true;
         } catch (IOException e) {
             return false;
@@ -309,7 +325,8 @@ public final class VaultManager {
      */
     public static Path saveNote(Note note, String originalText) {
         ensureVault();
-        String title = deriveNoteTitle(note.getContent());
+        String title = note.getTitle() != null && !note.getTitle().isBlank()
+                ? note.getTitle().trim() : deriveNoteTitle(note.getContent());
         String filename = sanitizeFilename(title) + MD_EXT;
         Path dir = getVaultPath().resolve(NOTES_DIR);
         removeStaleFiles(dir, note.getId(), filename);
@@ -318,6 +335,7 @@ public final class VaultManager {
         Map<String, String> fm = new HashMap<>();
         fm.put("type", "note");
         fm.put("id", note.getId());
+        fm.put("title", title);
         if (originalText != null && !originalText.isBlank()) {
             fm.put("source", "quick_note");
             fm.put("original_text", originalText);
@@ -325,11 +343,10 @@ public final class VaultManager {
         fm.put("created", note.getCreatedAt() != null ? note.getCreatedAt().format(DATETIME_FMT) : "");
         fm.put("updated", note.getUpdatedAt() != null ? note.getUpdatedAt().format(DATETIME_FMT) : "");
 
-        StringBuilder body = new StringBuilder();
-        body.append("# ").append(title).append("\n\n");
-        body.append(note.getContent()).append("\n");
+        // O corpo guarda apenas o conteúdo da nota — o título vive no frontmatter.
+        String body = note.getContent() == null ? "" : note.getContent();
 
-        return writeMarkdown(file, fm, body.toString());
+        return writeMarkdown(file, fm, body);
     }
 
     /**
@@ -433,6 +450,40 @@ public final class VaultManager {
      * @param id     o id estável da entidade a eliminar
      * @return {@code true} se algum ficheiro foi eliminado
      */
+    /**
+     * Devolve o caminho do ficheiro markdown da entidade com o id indicado, no
+     * diretório do tipo de entidade dado. Procura por id (não por nome de
+     * ficheiro), pelo que funciona mesmo após renomeações.
+     *
+     * @param dirName o subdiretório do tipo de entidade (ex.: {@link #PEOPLE_DIR})
+     * @param id      o id estável da entidade
+     * @return o caminho do ficheiro, ou {@code null} se não encontrado
+     */
+    public static Path findFileById(String dirName, String id) {
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+        Path dir = getVaultPath().resolve(dirName);
+        if (!Files.isDirectory(dir)) {
+            return null;
+        }
+        try (Stream<Path> files = Files.list(dir)) {
+            for (Path p : files.filter(p -> p.toString().endsWith(MD_EXT)).toList()) {
+                try {
+                    String content = Files.readString(p);
+                    if (id.equals(parseFrontmatter(content).get("id"))) {
+                        return p;
+                    }
+                } catch (IOException ignored) {
+                    // Ignorar ficheiros ilegíveis.
+                }
+            }
+        } catch (IOException ignored) {
+            // Ignorar erros de listagem.
+        }
+        return null;
+    }
+
     private static boolean deleteEntityById(String dirName, String id) {
         if (id == null || id.isBlank()) {
             return false;
@@ -448,13 +499,18 @@ public final class VaultManager {
                     String content = Files.readString(p);
                     if (id.equals(parseFrontmatter(content).get("id"))) {
                         deleted |= Files.deleteIfExists(p);
+                        util.VaultFileWatcher.markInternalWrite(p);
                     }
-                } catch (IOException ignored) {
-                    // Ignorar ficheiros ilegíveis.
+                } catch (IOException e) {
+                    LOGGER.log(Level.WARNING, "[AETHER] Could not read vault file during delete: " + p + ": " + e.getMessage());
                 }
             }
-        } catch (IOException ignored) {
-            // Ignorar erros de listagem.
+        } catch (IOException e) {
+            // Erro de listagem do diretório — não fatal, mas registo de diagnóstico.
+            LOGGER.log(Level.WARNING, "[AETHER] Could not list vault directory for delete: " + dir + ": " + e.getMessage());
+        }
+        if (deleted) {
+            util.VaultIndex.getInstance().invalidate();
         }
         return deleted;
     }
@@ -694,9 +750,21 @@ public final class VaultManager {
             }
             sb.append(FM_DELIMITER).append("\n\n");
             sb.append(body);
-            Files.writeString(file, sb.toString());
+            // Escrita atómica: temp -> flush -> atomic move. Evita corrupção de
+            // ficheiros Markdown se o processo for interrompido a meio da escrita.
+            util.AtomicWrites.write(file, sb.toString());
+            // Sinalizar ao FileWatcher que esta escrita é interna (supressão de
+            // loop) e invalidar o index para que leituras seguintes vejam dados
+            // atualizados. O vault continua a ser a fonte de persistência.
+            util.VaultFileWatcher.markInternalWrite(file);
+            util.VaultIndex.getInstance().invalidate();
             return file;
         } catch (IOException e) {
+            // Registar a falha em vez de a engolir silenciosamente.
+            LOGGER.log(Level.WARNING, "[AETHER] Failed to write vault file " + file + ": " + e.getMessage());
+            return null;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.WARNING, "[AETHER] Unexpected error writing vault file " + file + ": " + e.getMessage());
             return null;
         }
     }
@@ -807,10 +875,20 @@ public final class VaultManager {
         Map<String, String> fm = parseFrontmatter(content);
         String body = extractBody(content);
         String id = fm.getOrDefault("id", "");
+        String title = fm.getOrDefault("title", "");
         LocalDateTime created = parseDateTime(fm.get("created"));
         LocalDateTime updated = parseDateTime(fm.get("updated"));
 
-        return new Note(id, body, created, updated);
+        // Retrocompatibilidade: notas antigas guardavam "# Título\n\n..." no
+        // corpo sem título no frontmatter. Recupera-se o título do cabeçalho e
+        // limpa-se o corpo para que o editor não mostre o título duplicado.
+        if ((title == null || title.isBlank()) && body != null && body.startsWith("# ")) {
+            String[] lines = body.split("\n", 2);
+            title = lines[0].substring(2).trim();
+            body = lines.length > 1 ? lines[1].replaceFirst("^\n+", "") : "";
+        }
+
+        return new Note(id, title, body, created, updated);
     }
 
     /**
@@ -883,7 +961,11 @@ public final class VaultManager {
         if (name == null || name.isBlank()) {
             return "untitled";
         }
-        return name.trim()
+        // Normaliza diacríticos antes de remover caracteres especiais:
+        // "João" → "joao" (antes era "joo" — perda de informação no nome
+        // do ficheiro). NFD decompõe "ã" em "a"+til, o filtro remove o til.
+        return java.text.Normalizer.normalize(name.trim(), java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
                 .replaceAll("[^a-zA-Z0-9\\-\\s]", "")
                 .replaceAll("\\s+", "-")
                 .toLowerCase();

@@ -36,9 +36,9 @@
             <Insets top="28" right="34" bottom="20" left="34"/>
         </padding>
         <children>
-            <Label text="People" styleClass="settings-title"/>
+            <Label text="%entity.people.title" styleClass="settings-title"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Button text="+ Add Person" onAction="#handleAddPerson" styleClass="dash-add-note-btn"/>
+            <Button text="%entity.people.add" onAction="#handleAddPerson" styleClass="dash-add-note-btn"/>
         </children>
     </HBox>
 

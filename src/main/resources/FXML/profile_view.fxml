@@ -24,6 +24,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.shape.Circle?>
 
 <ScrollPane xmlns="http://javafx.com/javafx/21"
@@ -205,6 +206,14 @@
                     </children>
                 </VBox>
 
+                <!-- Location -->
+                <VBox spacing="2" styleClass="profile-info-row">
+                    <children>
+                        <Label text="Location" styleClass="profile-info-label"/>
+                        <Label fx:id="infoLocationLabel" text="—" styleClass="profile-info-value" wrapText="true"/>
+                    </children>
+                </VBox>
+
                 <!-- Studies -->
                 <VBox spacing="2" styleClass="profile-info-row">
                     <children>
@@ -336,12 +345,12 @@
                 <children>
                     <Label text="⚡" styleClass="profile-section-icon"/>
                     <Label text="Suggested Updates" styleClass="dash-card-title"/>
+                    <Label fx:id="suggestedUpdatesLabel" text="No pending suggestions. AETHER will suggest updates here when it learns new things about you." styleClass="profile-suggested-hint" wrapText="true"/>
                 </children>
             </HBox>
             <Label text="When AETHER detects new information about you during conversations, it will suggest profile updates here. You decide whether to apply them — AI never modifies your profile without your confirmation."
                    styleClass="profile-suggested-hint" wrapText="true"/>
-            <Label fx:id="suggestedUpdatesLabel" text="No pending suggestions. AETHER will suggest updates here when it learns new things about you."
-                   styleClass="profile-suggested-hint" wrapText="true"/>
+            <VBox fx:id="suggestedUpdatesContainer" spacing="10"/>
         </children>
     </VBox>
 
@@ -365,8 +374,26 @@
             <Label text="Your name, preferred name, birthday, occupation/roles and About information are included automatically in AETHER's context. Use the box below for additional details, goals, preferences, routines, projects or anything else you want AETHER to remember."
                    styleClass="profile-ai-context-hint" wrapText="true"/>
             <Label text="Automatic profile context ✓" styleClass="profile-context-auto-label"/>
+            <!-- Toolbar de markdown — reutiliza as mesmas classes CSS das Notes
+                 (note-toolbar / note-toolbar-btn) para uma experiência de
+                 edição idêntica à das Notes (spec #12, #13). -->
+            <HBox fx:id="aiContextToolbar" styleClass="note-toolbar" spacing="4" alignment="CENTER_LEFT">
+                <Button text="B" styleClass="note-toolbar-btn" onAction="#ctxInsertBold"/>
+                <Button text="I" styleClass="note-toolbar-btn" onAction="#ctxInsertItalic"/>
+                <Button text="H1" styleClass="note-toolbar-btn" onAction="#ctxInsertH1"/>
+                <Button text="H2" styleClass="note-toolbar-btn" onAction="#ctxInsertH2"/>
+                <Button text="• List" styleClass="note-toolbar-btn" onAction="#ctxInsertBullet"/>
+                <Button text="1. List" styleClass="note-toolbar-btn" onAction="#ctxInsertNumbered"/>
+                <Button text="❝ Quote" styleClass="note-toolbar-btn" onAction="#ctxInsertQuote"/>
+                <Button text="&lt;/&gt;" styleClass="note-toolbar-btn" onAction="#ctxInsertCode"/>
+                <Button text="Link" styleClass="note-toolbar-btn" onAction="#ctxInsertLink"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <ToggleButton fx:id="aiContextPreviewBtn" text="%notes.editor.preview" styleClass="note-mode-btn" onAction="#ctxTogglePreview"/>
+            </HBox>
             <TextArea fx:id="aiContextInput" promptText="Add anything else AETHER should know about you..."
                       styleClass="area-texto, profile-ai-context-input" wrapText="true" prefRowCount="8" VBox.vgrow="ALWAYS"/>
+            <!-- Painel de preview — reutiliza NoteMarkdownRenderer, igual às Notes. -->
+            <VBox fx:id="aiContextPreview" styleClass="ai-context-preview" managed="false" visible="false" VBox.vgrow="ALWAYS"/>
             <HBox spacing="10" alignment="CENTER_RIGHT">
                 <children>
                     <Button text="Save Context" styleClass="profile-save-context-btn" onAction="#handleSaveContext"/>

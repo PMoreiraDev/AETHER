@@ -9,3 +9,10 @@ data/
 *.db
 *.db-shm
 *.db-wal
+
+# Packaging build output (distribution zip, jpackage images, copied deps)
+target/lib/
+target/*.zip
+target/jpackage/
+target/AETHER-*-distribution/
+dist/

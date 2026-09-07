@@ -19,6 +19,7 @@ import persistence.VaultManager;
 import domain.entities.Event;
 import domain.entities.Person;
 import domain.entities.Task;
+import util.I18n;
 
 /**
  * Controlador da vista do dashboard ({@code dashboard_view.fxml}), carregada
@@ -65,6 +66,7 @@ public class DashboardViewController implements Initializable {
     @FXML private VBox todayScheduleContainer;
     @FXML private VBox calendarGrid;
     @FXML private VBox contextGraphContainer;
+    @FXML private Label graphPlaceholderLabel;
 
     // ------------------------------------------------------------------
     // Inicialização
@@ -76,6 +78,9 @@ public class DashboardViewController implements Initializable {
      * @param location o URL do FXML carregado
      * @param resources o pacote de recursos de localização
      */
+    /** Listener de refresh do vault (subscrito no initialize). */
+    private static java.util.function.Consumer<util.VaultRefreshBus.VaultChangedEvent> activeRefreshListener;
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         loadPeople();
@@ -84,6 +89,24 @@ public class DashboardViewController implements Initializable {
         loadTodaySchedule();
         renderCalendar();
         renderContextGraph();
+
+        // Refresh reativo: quando o vault muda (na app ou via FileWatcher externo),
+        // refresca a vista sem reiniciar. Substitui o listener anterior para não
+        // acumular subscrições entre recriações da vista.
+        if (activeRefreshListener != null) {
+            util.VaultRefreshBus.unsubscribe(activeRefreshListener);
+        }
+        activeRefreshListener = e -> javafx.application.Platform.runLater(this::refreshAll);
+        util.VaultRefreshBus.subscribe(activeRefreshListener);
+    }
+
+    /** Refresca todos os painéis do dashboard a partir do VaultIndex atual. */
+    private void refreshAll() {
+        loadPeople();
+        loadEvents();
+        loadTasks();
+        loadTodaySchedule();
+        renderCalendar();
     }
 
     // ------------------------------------------------------------------
@@ -101,7 +124,7 @@ public class DashboardViewController implements Initializable {
         var people = VaultManager.listPeople();
         peopleCountLabel.setText(String.valueOf(people.size()));
         if (people.isEmpty()) {
-            Label empty = new Label("No people yet.");
+            Label empty = new Label(I18n.tr("dashboard.empty.people"));
             empty.getStyleClass().add("dash-empty-state");
             peopleListContainer.getChildren().add(empty);
             return;
@@ -151,7 +174,7 @@ public class DashboardViewController implements Initializable {
         var events = VaultManager.listEvents();
         eventsCountLabel.setText(String.valueOf(events.size()));
         if (events.isEmpty()) {
-            Label empty = new Label("No events yet.");
+            Label empty = new Label(I18n.tr("dashboard.empty.events"));
             empty.getStyleClass().add("dash-empty-state");
             eventsListContainer.getChildren().add(empty);
             return;
@@ -174,7 +197,7 @@ public class DashboardViewController implements Initializable {
                 });
 
         if (eventsListContainer.getChildren().isEmpty()) {
-            Label empty = new Label("No upcoming events.");
+            Label empty = new Label(I18n.tr("dashboard.empty.upcomingEvents"));
             empty.getStyleClass().add("dash-empty-state");
             eventsListContainer.getChildren().add(empty);
         }
@@ -195,7 +218,7 @@ public class DashboardViewController implements Initializable {
         var tasks = VaultManager.listTasks();
         tasksCountLabel.setText(String.valueOf(tasks.size()));
         if (tasks.isEmpty()) {
-            Label empty = new Label("No tasks yet.");
+            Label empty = new Label(I18n.tr("dashboard.empty.tasks"));
             empty.getStyleClass().add("dash-empty-state");
             tasksListContainer.getChildren().add(empty);
             return;
@@ -213,7 +236,7 @@ public class DashboardViewController implements Initializable {
                 });
 
         if (tasksListContainer.getChildren().isEmpty()) {
-            Label empty = new Label("No open tasks.");
+            Label empty = new Label(I18n.tr("dashboard.empty.openTasks"));
             empty.getStyleClass().add("dash-empty-state");
             tasksListContainer.getChildren().add(empty);
         }
@@ -252,7 +275,7 @@ public class DashboardViewController implements Initializable {
 
         todayCountLabel.setText(String.valueOf(count));
         if (count == 0) {
-            Label empty = new Label("Nothing scheduled for today.");
+            Label empty = new Label(I18n.tr("dashboard.empty.today"));
             empty.getStyleClass().add("dash-empty-state");
             todayScheduleContainer.getChildren().add(empty);
         }
@@ -293,9 +316,9 @@ public class DashboardViewController implements Initializable {
      */
     private void renderContextGraph() {
         contextGraphContainer.getChildren().clear();
-        Label placeholder = new Label("Context Graph coming soon");
+        Label placeholder = new Label(I18n.tr("dashboard.graph.title"));
         placeholder.getStyleClass().add("dash-graph-placeholder-text");
-        Label hint = new Label("Add people, events, tasks and notes to see connections here later.");
+        Label hint = new Label(I18n.tr("dashboard.graph.hint"));
         hint.getStyleClass().add("dash-graph-hint");
         contextGraphContainer.getChildren().addAll(placeholder, hint);
     }
@@ -364,7 +387,7 @@ public class DashboardViewController implements Initializable {
         YearMonth prevMonth = displayedMonth.minusMonths(1);
         int prevDays = prevMonth.lengthOfMonth();
         for (int i = dayOfWeek - 1; i >= 0; i--) {
-            currentWeek.getChildren().add(createCalendarDay(prevDays - i, false, false));
+            currentWeek.getChildren().add(createCalendarDay(prevDays - i, prevMonth.atDay(prevDays - i), false, false));
         }
 
         LocalDate today = LocalDate.now();
@@ -382,40 +405,135 @@ public class DashboardViewController implements Initializable {
             }
 
             boolean isToday = YearMonth.from(today).equals(displayedMonth) && day == today.getDayOfMonth();
-            currentWeek.getChildren().add(createCalendarDay(day, true, isToday));
+            currentWeek.getChildren().add(createCalendarDay(day, displayedMonth.atDay(day), true, isToday));
             day++;
             currentDayOfWeek++;
         }
 
         int nextDay = 1;
         while (currentDayOfWeek < 7) {
-            currentWeek.getChildren().add(createCalendarDay(nextDay, false, false));
+            currentWeek.getChildren().add(createCalendarDay(nextDay, displayedMonth.plusMonths(1).atDay(nextDay), false, false));
             nextDay++;
             currentDayOfWeek++;
         }
         calendarGrid.getChildren().add(currentWeek);
     }
 
+    /** Número máximo de chips de itens mostrados por dia (evita células gigantes). */
+    private static final int MAX_CAL_ITEMS_PER_DAY = 3;
+
     /**
-     * Cria um label de dia do calendário.
+     * Cria uma célula de dia do calendário, com o número do dia e até
+     * {@link #MAX_CAL_ITEMS_PER_DAY} indicadores de eventos/tarefas desse dia.
+     * Os dados vêm do {@link util.VaultIndex} (cache central), não de uma segunda
+     * fonte de verdade. Eventos e tarefas são visualmente distintos.
      *
      * @param day o número do dia
+     * @param date a data real (para consultar o index); {@code null} para dias
+     *            de outros meses (não mostram itens)
      * @param currentMonth se pertence ao mês atual
      * @param isToday se é o dia de hoje
-     * @return o label criado
+     * @return a célula criada
      */
-    private Label createCalendarDay(int day, boolean currentMonth, boolean isToday) {
-        Label label = new Label(String.valueOf(day));
-        label.getStyleClass().add("dash-cal-day");
+    private VBox createCalendarDay(int day, LocalDate date, boolean currentMonth, boolean isToday) {
+        Label dayLabel = new Label(String.valueOf(day));
+        dayLabel.getStyleClass().add("dash-cal-day");
         if (!currentMonth) {
-            label.getStyleClass().add("dash-cal-day-other");
+            dayLabel.getStyleClass().add("dash-cal-day-other");
         }
         if (isToday) {
-            label.getStyleClass().add("dash-cal-day-today");
+            dayLabel.getStyleClass().add("dash-cal-day-today");
         }
-        label.setMaxWidth(Double.MAX_VALUE);
-        label.setAlignment(javafx.geometry.Pos.CENTER);
-        return label;
+        dayLabel.setMaxWidth(Double.MAX_VALUE);
+        dayLabel.setAlignment(javafx.geometry.Pos.CENTER);
+
+        VBox cell = new VBox(dayLabel);
+        cell.getStyleClass().add("dash-cal-cell");
+        cell.setAlignment(javafx.geometry.Pos.TOP_CENTER);
+        cell.setSpacing(1);
+        cell.setPrefWidth(28);
+
+        if (date != null && currentMonth) {
+            util.VaultIndex index = util.VaultIndex.getInstance();
+            java.util.List<Event> dayEvents = index.eventsOn(date);
+            java.util.List<Task> dayTasks = index.tasksDueOn(date);
+            int shown = 0;
+            for (Event e : dayEvents) {
+                if (shown >= MAX_CAL_ITEMS_PER_DAY) break;
+                cell.getChildren().add(createCalendarChip(e.getTitle(), "dash-cal-event"));
+                shown++;
+            }
+            for (Task t : dayTasks) {
+                if (shown >= MAX_CAL_ITEMS_PER_DAY) break;
+                cell.getChildren().add(createCalendarChip(t.getTitle(), "dash-cal-task"));
+                shown++;
+            }
+            int total = dayEvents.size() + dayTasks.size();
+            cell.setOnMouseClicked(event -> showDayDetails(date, dayEvents, dayTasks));
+            if (total > MAX_CAL_ITEMS_PER_DAY) {
+                Label more = new Label("+" + (total - MAX_CAL_ITEMS_PER_DAY));
+                more.getStyleClass().add("dash-cal-more");
+                cell.getChildren().add(more);
+            }
+        }
+        return cell;
+    }
+
+    /** Shows the existing day data when a calendar day is selected. */
+    private void showDayDetails(LocalDate date, java.util.List<Event> events, java.util.List<Task> tasks) {
+        javafx.scene.control.Dialog<Void> dialog = new javafx.scene.control.Dialog<>();
+        util.AetherDialogs.style(dialog);
+        dialog.setTitle(date.toString());
+        VBox content = new VBox(10);
+        content.setPadding(new javafx.geometry.Insets(10));
+        Label title = new Label(date.toString());
+        title.getStyleClass().add("subtitulo-perfil");
+        content.getChildren().add(title);
+        if (events.isEmpty() && tasks.isEmpty()) {
+            Label empty = new Label(util.I18n.tr("calendar.day.empty"));
+            empty.getStyleClass().add("dash-empty-state");
+            content.getChildren().add(empty);
+        } else {
+            if (!events.isEmpty()) {
+                Label h = new Label(util.I18n.tr("calendar.events")); h.getStyleClass().add("dash-card-title-sm"); content.getChildren().add(h);
+                for (Event e : events) {
+                    Button item = new Button((e.getStartDateTime() == null ? "" : e.getStartDateTime().toLocalTime() + "  ") + e.getTitle());
+                    item.getStyleClass().add("search-result-cell"); item.setMaxWidth(Double.MAX_VALUE);
+                    item.setOnAction(ev -> { dialog.close(); if (DashboardController.getActive() != null) DashboardController.getActive().showEvents(); });
+                    content.getChildren().add(item);
+                }
+            }
+            if (!tasks.isEmpty()) {
+                Label h = new Label(util.I18n.tr("calendar.tasks")); h.getStyleClass().add("dash-card-title-sm"); content.getChildren().add(h);
+                for (Task t : tasks) {
+                    Button item = new Button((t.getDeadline() == null ? "" : t.getDeadline().toLocalTime() + "  ") + t.getTitle());
+                    item.getStyleClass().add("search-result-cell"); item.setMaxWidth(Double.MAX_VALUE);
+                    item.setOnAction(ev -> { dialog.close(); if (DashboardController.getActive() != null) DashboardController.getActive().showTasks(); });
+                    content.getChildren().add(item);
+                }
+            }
+        }
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(javafx.scene.control.ButtonType.CLOSE);
+        dialog.showAndWait();
+    }
+
+    /**
+     * Cria um chip compacto para um item do calendário (evento ou tarefa).
+     *
+     * @param title o título do item (truncado)
+     * @param styleClass a classe CSS que distingue evento de tarefa
+     * @return o chip criado
+     */
+    private Label createCalendarChip(String title, String styleClass) {
+        String text = title == null ? "" : title.trim();
+        if (text.length() > 16) {
+            text = text.substring(0, 16) + "…";
+        }
+        Label chip = new Label(text);
+        chip.getStyleClass().add(styleClass);
+        chip.setMaxWidth(Double.MAX_VALUE);
+        return chip;
     }
 
     // ------------------------------------------------------------------

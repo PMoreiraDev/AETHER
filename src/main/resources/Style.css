@@ -482,14 +482,33 @@
             #6366f1 0%, #4f46e5 100%);
 }
 
-/* Conteúdo e cabeçalho transparentes para o fundo escuro do painel aparecer. */
+/* Conteúdo e cabeçalho transparentes para o fundo escuro do painel aparecer.
+   [CORRIGIDO] O seletor antigo ".custom-dialog-pane > .header" não corresponde a
+   nenhum nó real do DialogPane do JavaFX — o nó do cabeçalho chama-se
+   ".header-panel" (que contém o graphic-container e o label do headerText).
+   Sem esta regra, o header-panel ficava com o fundo claro do Modena e o ícone
+   de interrogação azul por defeito — daí o "bloco branco" no topo dos alerts. */
+.custom-dialog-pane > .header-panel {
+    -fx-background-color: transparent;
+    -fx-background-radius: 16px 16px 0 0;
+    -fx-padding: 0 0 6 0;
+}
+.custom-dialog-pane > .header-panel .label {
+    -fx-text-fill: #f8fafc;
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+}
+.custom-dialog-pane > .header-panel .graphic-container {
+    -fx-background-color: transparent;
+    -fx-padding: 0 8 0 0;
+}
 .custom-dialog-pane > .content {
     -fx-background-color: transparent;
     -fx-padding: 4 0 8 0;
 }
-.custom-dialog-pane > .header {
-    -fx-background-color: transparent;
-    -fx-padding: 0 0 8 0;
+.custom-dialog-pane > .content .label {
+    -fx-text-fill: #cbd5e1;
+    -fx-font-size: 13px;
 }
 .custom-dialog-pane > .scroll-pane,
 .custom-dialog-pane > .scroll-pane .viewport {
@@ -651,6 +670,93 @@
 }
 .combo-box-glass .arrow {
     -fx-background-color: #94a3b8;
+}
+
+/* ComboBox dos controlos de Definições (idioma). Mesmo design
+   glassmorphism dos campos de texto e botões das definições, com estados
+   selected/hover/focused claramente visíveis.
+   Altura/padding alinhados com .campo-texto para que o seletor não pareça
+   "crus" nem desalinhado em relação aos restantes controlos da Settings. */
+.settings-select {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 9;
+    -fx-border-color: rgba(255, 255, 255, 0.18);
+    -fx-border-width: 1;
+    -fx-border-radius: 9;
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 13px;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+}
+.settings-select .box {
+    -fx-background-color: transparent;
+    -fx-background-radius: 9;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 8 12;
+}
+.settings-select .list-cell {
+    -fx-text-fill: #e2e8f0;
+    -fx-padding: 8 12;
+}
+.settings-select .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0 10;
+}
+.settings-select .arrow {
+    -fx-background-color: #94a3b8;
+}
+.settings-select:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+}
+.settings-select:focused {
+    -fx-border-color: #818cf8;
+    -fx-background-color: rgba(129, 140, 248, 0.10);
+}
+.settings-select:disabled {
+    -fx-opacity: 0.5;
+}
+.settings-select-popup .list-view {
+    -fx-background-color: #1e293b;
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 8;
+}
+.settings-select-popup .list-view .list-cell {
+    -fx-text-fill: #cbd5e1;
+    -fx-padding: 8 12;
+}
+.settings-select-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.08);
+    -fx-text-fill: #ffffff;
+}
+.settings-select-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: rgba(129, 140, 248, 0.22);
+    -fx-text-fill: #ffffff;
+}
+
+/* Linha de formulário das definições: label à esquerda (largura fixa,
+   alinhada com as .settings-section-label) + controlo à direita. Resolve o
+   aspeto "crus" e desalinhado dos seletores de idioma/tema: em vez de
+   combos largos a ocupar toda a largura, ficam compactos e alinhados com
+   os text fields, toggles e botões da mesma vista. */
+.settings-form-row {
+    -fx-spacing: 14;
+    -fx-alignment: center-left;
+}
+.settings-form-label {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-min-width: 150;
+    -fx-pref-width: 150;
+    -fx-max-width: 150;
+    -fx-alignment: center-left;
+}
+.settings-form-control {
+    -fx-pref-width: 220;
+    -fx-max-width: 260;
 }
 
 /* ProgressBar Customizada */
@@ -1365,6 +1471,36 @@
     -fx-text-fill: #334155;
 }
 
+.dash-cal-cell {
+    -fx-padding: 2 1 2 1;
+    -fx-min-height: 52;
+    -fx-pref-height: 58;
+    -fx-max-height: 64;
+    -fx-alignment: TOP_CENTER;
+    -fx-border-color: transparent;
+    -fx-border-radius: 4;
+}
+.dash-cal-event {
+    -fx-background-color: rgba(120, 160, 255, 0.18);
+    -fx-text-fill: #9db8ff;
+    -fx-font-size: 9;
+    -fx-padding: 0 2 0 2;
+    -fx-background-radius: 3;
+    -fx-max-width: 26;
+}
+.dash-cal-task {
+    -fx-background-color: rgba(120, 200, 150, 0.18);
+    -fx-text-fill: #8fd6a8;
+    -fx-font-size: 9;
+    -fx-padding: 0 2 0 2;
+    -fx-background-radius: 3;
+    -fx-max-width: 26;
+}
+.dash-cal-more {
+    -fx-font-size: 8;
+    -fx-text-fill: -fx-text-muted;
+    -fx-opacity: 0.7;
+}
 .dash-cal-day-today {
     -fx-background-color: rgba(34, 211, 238, 0.15);
     -fx-background-radius: 999px;
@@ -1910,6 +2046,17 @@
    nada — removido; o foco já é tratado por ".area-texto:focused .content". */
 .profile-ai-context-input {
     -fx-font-size: 14;
+    -fx-min-height: 140;
+}
+
+/* Painel de preview do editor de AI Context — reutiliza o mesmo vidro escuro
+   das Notes, para uma experiência de edição consistente. */
+.ai-context-preview {
+    -fx-background-color: rgba(15,23,42,0.55);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(148,163,184,0.18);
+    -fx-border-radius: 10;
+    -fx-padding: 14 16;
     -fx-min-height: 140;
 }
 
@@ -2540,3 +2687,649 @@
     -fx-border-width: 1px;
     -fx-border-radius: 12px;
 }
+
+/* =====================================================================
+   AI PROPOSAL CARDS — Glass / Glassmorphism design system
+   ---------------------------------------------------------------------
+   Princípios:
+   - superfícies glass translúcidas (rgba + gradiente subtil);
+   - borders muito suaves, baixa saturação, nunca vermelho/verde fortes;
+   - corner radius consistente (14px) com .ai-bubble-* e .dash-card;
+   - tipografia limpa, hierarquia visual clara (eyebrow → tipo → título
+     → subtítulo → quote → meta → relações → ações);
+   - estados hover/pressed/disabled discretos, micro-interações subtis;
+   - fact vs inferência vs sugestão comunicados via trust badges.
+   ===================================================================== */
+
+/* --- Proposals section (Notes view) --- */
+.ai-proposals-section {
+    -fx-background-color: rgba(99, 102, 241, 0.05);
+    -fx-border-color: rgba(99, 102, 241, 0.18);
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 14;
+    -fx-spacing: 8;
+}
+.ai-proposals-section-title {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #818cf8;
+    -fx-letter-spacing: 0.06em;
+    -fx-text-transform: uppercase;
+}
+
+/* --- Linha de progresso da análise (barra + estado) --- */
+.ai-analyze-progress {
+    -fx-padding: 4 0 4 0;
+}
+.ai-analyze-progress .track {
+    -fx-background-color: rgba(129, 140, 248, 0.18);
+    -fx-background-radius: 999px;
+    -fx-background-insets: 0;
+}
+.ai-analyze-progress .bar {
+    -fx-background-color: #818cf8;
+    -fx-background-radius: 999px;
+    -fx-background-insets: 0;
+}
+.ai-analyze-status {
+    -fx-font-size: 12px;
+    -fx-text-fill: #94a3b8;
+}
+
+/* --- Card glass surface --- */
+.ai-proposal-card {
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(22, 29, 46, 0.82) 0%,
+            rgba(16, 21, 34, 0.78) 100%);
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-color: rgba(129, 140, 248, 0.22);
+    -fx-border-width: 1;
+    -fx-border-insets: 0;
+    -fx-padding: 15 17 15 17;
+    -fx-spacing: 9;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.32), 14, 0, 0, 4);
+}
+.ai-proposal-card:hover {
+    -fx-border-color: rgba(129, 140, 248, 0.34);
+}
+/* Estados terminais: a card deixa de parecer "pending". */
+.ai-proposal-card.accepted {
+    -fx-border-color: rgba(127, 209, 179, 0.42);
+    -fx-background-color: linear-gradient(from 0% 0% to 0% 100%,
+            rgba(22, 31, 30, 0.82) 0%,
+            rgba(16, 24, 24, 0.78) 100%);
+}
+.ai-proposal-card.rejected {
+    -fx-opacity: 0.5;
+    -fx-border-color: rgba(240, 163, 163, 0.28);
+}
+
+/* --- Eyebrow: ✦ AI PROPOSAL --- */
+.ai-proposal-eyebrow {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #a5b4fc;
+    -fx-letter-spacing: 0; /* JavaFX não suporta letter-spacing; espaçamento no texto */
+}
+
+/* --- Trust badge: facto / inferência / sugestão --- */
+.ai-proposal-trust {
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #94a3b8;
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 999px;
+    -fx-padding: 3 8 3 8;
+}
+.ai-proposal-trust.confirmed {
+    -fx-text-fill: #a5b4fc;
+    -fx-background-color: rgba(129, 140, 248, 0.14);
+}
+.ai-proposal-trust.inferred {
+    -fx-text-fill: #fcd9a0;
+    -fx-background-color: rgba(251, 191, 36, 0.12);
+}
+.ai-proposal-trust.suggested {
+    -fx-text-fill: #94a3b8;
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+}
+/* Classificação semântica: FACT = verde subtil (fortemente suportado pela nota). */
+.ai-proposal-trust.fact {
+    -fx-text-fill: #86efac;
+    -fx-background-color: rgba(34, 197, 94, 0.14);
+}
+
+/* --- Cabeçalho: type badge + título --- */
+.ai-proposal-type-badge {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #cdd6f4;
+    -fx-background-color: rgba(129, 140, 248, 0.16);
+    -fx-background-radius: 6px;
+    -fx-padding: 4 9 4 9;
+}
+.ai-proposal-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #f8fafc;
+}
+.ai-proposal-subtitle {
+    -fx-font-size: 12px;
+    -fx-text-fill: #94a3b8;
+}
+
+/* --- Quote / excerto da fonte ("Falei com o Manel...") --- */
+.ai-proposal-quote {
+    -fx-font-size: 12px;
+    -fx-text-fill: #cbd5e1;
+    -fx-background-color: rgba(255, 255, 255, 0.035);
+    -fx-background-radius: 9px;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-radius: 9px;
+    -fx-border-width: 1;
+    -fx-border-insets: 0;
+    -fx-padding: 9 11 9 11;
+}
+
+/* --- Linhas de meta (confiança, fonte) --- */
+.ai-proposal-meta-row {
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+}
+.ai-proposal-meta-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: #64748b;
+}
+.ai-proposal-meta-value {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #cbd5e1;
+}
+
+/* --- Barra de confiança (ProgressBar) --- */
+.ai-proposal-confidence-bar {
+    -fx-pref-width: 120;
+    -fx-min-width: 120;
+    -fx-max-width: 120;
+    -fx-pref-height: 6;
+    -fx-min-height: 6;
+    -fx-max-height: 6;
+}
+.ai-proposal-confidence-bar .track {
+    -fx-background-color: rgba(255, 255, 255, 0.14);
+    -fx-background-radius: 999px;
+    -fx-background-insets: 0;
+}
+.ai-proposal-confidence-bar .bar {
+    -fx-background-color: #818cf8;
+    -fx-background-radius: 999px;
+    -fx-background-insets: 0;
+}
+
+/* --- Relações (Manel → AETHER) --- */
+.ai-proposal-relations-label {
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #64748b;
+}
+.ai-proposal-relation {
+    -fx-font-size: 11px;
+    -fx-text-fill: #cdd6f4;
+    -fx-background-color: rgba(255, 255, 255, 0.05);
+    -fx-background-radius: 999px;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-radius: 999px;
+    -fx-border-width: 1;
+    -fx-padding: 4 10 4 10;
+}
+.ai-proposal-relation-arrow {
+    -fx-text-fill: #64748b;
+    -fx-font-size: 11px;
+    -fx-padding: 0 4 0 4;
+}
+
+/* --- Linha de ações --- */
+.ai-proposal-actions {
+    -fx-spacing: 8;
+    -fx-alignment: center-right;
+    -fx-padding: 4 0 0 0;
+}
+
+/* --- Botões da proposta ---
+   Base partilhado: mesmo tamanho, padding, radius, font-size.
+   Accept = verde subtil, baixa saturação; Reject = vermelho subtil.
+   Nunca verde/vermelho fortes — tints translúcidos sobre glass. */
+.proposal-btn {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 9px;
+    -fx-border-radius: 9px;
+    -fx-border-width: 1;
+    -fx-padding: 7 16 7 16;
+    -fx-cursor: hand;
+    -fx-content-display: left;
+    -fx-graphic-text-gap: 7;
+    -fx-min-height: 32;
+    -fx-pref-height: 32;
+}
+.proposal-btn:hover { -fx-scale-x: 1.0; -fx-scale-y: 1.0; }
+.proposal-btn:pressed {
+    -fx-scale-x: 0.985;
+    -fx-scale-y: 0.985;
+}
+.proposal-btn:disabled {
+    -fx-opacity: 0.45;
+    -fx-cursor: default;
+}
+
+.proposal-btn-tertiary {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #94a3b8;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 7 8 7 8;
+    -fx-cursor: hand;
+}
+.proposal-btn-tertiary:hover { -fx-text-fill: #cbd5e1; }
+.proposal-btn-tertiary:disabled { -fx-opacity: 0.4; -fx-cursor: default; }
+
+/* Accept — green tint subtil (dark). */
+.proposal-accept-btn {
+    -fx-background-color: rgba(127, 209, 179, 0.10);
+    -fx-border-color: rgba(127, 209, 179, 0.32);
+    -fx-text-fill: #7fd1b3;
+}
+.proposal-accept-btn:hover {
+    -fx-background-color: rgba(127, 209, 179, 0.18);
+    -fx-border-color: rgba(127, 209, 179, 0.52);
+}
+.proposal-accept-btn:pressed {
+    -fx-background-color: rgba(127, 209, 179, 0.26);
+    -fx-border-color: rgba(127, 209, 179, 0.60);
+}
+.proposal-accept-btn:disabled {
+    -fx-background-color: rgba(127, 209, 179, 0.06);
+    -fx-border-color: rgba(127, 209, 179, 0.16);
+    -fx-text-fill: #7fd1b3;
+    -fx-opacity: 0.45;
+}
+.proposal-accept-btn.armed {
+    -fx-background-color: rgba(127, 209, 179, 0.24);
+    -fx-border-color: rgba(127, 209, 179, 0.62);
+}
+
+/* Reject — red tint subtil (dark). */
+.proposal-reject-btn {
+    -fx-background-color: rgba(240, 163, 163, 0.10);
+    -fx-border-color: rgba(240, 163, 163, 0.32);
+    -fx-text-fill: #f0a3a3;
+}
+.proposal-reject-btn:hover {
+    -fx-background-color: rgba(240, 163, 163, 0.18);
+    -fx-border-color: rgba(240, 163, 163, 0.52);
+}
+.proposal-reject-btn:pressed {
+    -fx-background-color: rgba(240, 163, 163, 0.26);
+    -fx-border-color: rgba(240, 163, 163, 0.60);
+}
+.proposal-reject-btn:disabled {
+    -fx-background-color: rgba(240, 163, 163, 0.06);
+    -fx-border-color: rgba(240, 163, 163, 0.16);
+    -fx-text-fill: #f0a3a3;
+    -fx-opacity: 0.45;
+}
+
+/* --- Estado terminal: feedback após aceitar/rejeitar --- */
+.ai-proposal-state {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-padding: 6 0 0 0;
+}
+.ai-proposal-state.done { -fx-text-fill: #7fd1b3; }
+.ai-proposal-state.error { -fx-text-fill: #f0a3a3; }
+.ai-proposal-state.rejected { -fx-text-fill: #94a3b8; -fx-font-weight: normal; }
+
+/* Accept — green tint subtil, texto legível. */
+
+/* Reject — red tint subtil, texto legível. */
+
+
+/* Compat: classes antigas ainda referenciadas por código não-UI. */
+.ai-approval-card { -fx-background-radius: 14; -fx-border-radius: 14; }
+.ai-approval-title { -fx-font-weight: bold; }
+.ai-approval-btn { -fx-cursor: hand; -fx-background-radius: 8; }
+.ai-approval-btn-primary { -fx-font-weight: bold; -fx-background-radius: 8; }
+
+/* ===== Header search field ===== */
+.dash-search-field {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 8;
+    -fx-border-color: rgba(255, 255, 255, 0.12);
+    -fx-border-radius: 8;
+    -fx-text-fill: #cdd6f4;
+    -fx-prompt-text-fill: #7f8499;
+    -fx-padding: 6 10 6 10;
+    -fx-cursor: text;
+}
+.dash-search-field:focused {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-border-color: rgba(129, 140, 248, 0.7);
+}
+
+/* ===================================================================== */
+/*  AETHER — DESIGN SYSTEM LAYER (Private Alpha UX)
+   Camada reutilizável: tokens, tipografia, botões, segmented control,
+   empty states, focus ring, scrollbars, note editor, save-state, model states.
+   Reutiliza a paleta Glass existente (cyan #22d3ee, indigo #818cf8,
+   slate text). Não substitui as classes existentes — estende o sistema.
+   ===================================================================== */
+
+/* ---------- Scrollbars ---------- */
+.scroll-pane > .viewport { -fx-background-color: transparent; }
+.scroll-pane > .corner { -fx-background-color: transparent; }
+.scroll-bar { -fx-background-color: transparent; -fx-padding: 0; }
+.scroll-bar:vertical   { -fx-pref-width: 9px; }
+.scroll-bar:horizontal { -fx-pref-height: 9px; }
+.scroll-bar .thumb {
+    -fx-background-color: rgba(148,163,184,0.28);
+    -fx-background-radius: 999px;
+}
+.scroll-bar .thumb:hover { -fx-background-color: rgba(148,163,184,0.5); }
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-background-color: transparent; -fx-padding: 0; -fx-opacity: 0; -fx-max-height: 0;
+}
+.scroll-bar .track { -fx-background-color: transparent; }
+
+/* ---------- Typography scale ---------- */
+.aether-page-title {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #f8fafc;
+    -fx-label-padding: 0;
+}
+.aether-section-title {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #94a3b8;
+    -fx-label-padding: 0;
+}
+.aether-entity-title {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #e2e8f0;
+}
+.aether-caption {
+    -fx-font-size: 11px; -fx-text-fill: #64748b;
+}
+
+/* ---------- Buttons: primary / secondary / ghost / danger ---------- */
+.aether-btn {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-font-size: 12px; -fx-font-weight: bold;
+    -fx-background-radius: 9px; -fx-border-radius: 9px; -fx-border-width: 1px;
+    -fx-padding: 8 16; -fx-cursor: hand; -fx-min-height: 32; -fx-content-display: left;
+    -fx-graphic-text-gap: 7;
+}
+.aether-btn:pressed { -fx-scale-x: 0.985; -fx-scale-y: 0.985; }
+.aether-btn:disabled { -fx-opacity: 0.45; -fx-cursor: default; }
+.aether-btn-primary {
+    -fx-background-color: #22d3ee; -fx-border-color: #22d3ee; -fx-text-fill: #050811;
+    -fx-effect: dropshadow(gaussian, rgba(34,211,238,0.30), 10, 0, 0, 0);
+}
+.aether-btn-primary:hover { -fx-background-color: #06b6d4; -fx-border-color: #06b6d4; }
+.aether-btn-secondary {
+    -fx-background-color: rgba(255,255,255,0.06);
+    -fx-border-color: rgba(255,255,255,0.14); -fx-text-fill: #e2e8f0;
+}
+.aether-btn-secondary:hover { -fx-background-color: rgba(255,255,255,0.12); -fx-border-color: rgba(255,255,255,0.24); }
+.aether-btn-ghost {
+    -fx-background-color: transparent; -fx-border-color: transparent; -fx-text-fill: #94a3b8;
+    -fx-padding: 8 10;
+}
+.aether-btn-ghost:hover { -fx-background-color: rgba(255,255,255,0.07); -fx-text-fill: #f8fafc; }
+.aether-btn-danger {
+    -fx-background-color: rgba(240,163,163,0.12);
+    -fx-border-color: rgba(240,163,163,0.34); -fx-text-fill: #f0a3a3;
+}
+.aether-btn-danger:hover { -fx-background-color: rgba(240,163,163,0.20); -fx-border-color: rgba(240,163,163,0.55); }
+
+/* Focus ring — visível em todos os controlos interativos (acessibilidade) */
+.aether-btn:focused, .aether-segmented-btn:focused, .aether-text-field:focused,
+.aether-text-area:focused, .note-title-field:focused, .note-editor-area:focused,
+.note-toolbar-btn:focused, .dash-search-field:focused, .dash-nav-item:focused {
+    -fx-effect: dropshadow(gaussian, rgba(129,140,248,0.85), 8, 0.6, 0, 0);
+}
+
+/* ---------- Text fields / areas ---------- */
+.aether-text-field, .aether-text-area, .note-title-field, .note-editor-area {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-background-color: rgba(255,255,255,0.05);
+    -fx-background-radius: 10px; -fx-border-radius: 10px;
+    -fx-border-color: rgba(255,255,255,0.12); -fx-border-width: 1px;
+    -fx-text-fill: #e2e8f0; -fx-prompt-text-fill: #64748b;
+    -fx-padding: 9 12; -fx-cursor: text;
+}
+.aether-text-field:hover, .aether-text-area:hover, .note-title-field:hover, .note-editor-area:hover {
+    -fx-border-color: rgba(255,255,255,0.22);
+}
+
+/* ---------- Segmented control (Language) ---------- */
+.aether-segmented {
+    -fx-background-color: rgba(255,255,255,0.05);
+    -fx-background-radius: 10px; -fx-border-radius: 10px;
+    -fx-border-color: rgba(255,255,255,0.10); -fx-border-width: 1px;
+    -fx-padding: 3px; -fx-spacing: 2px;
+}
+.aether-segmented-btn {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-font-size: 12px; -fx-font-weight: 600;
+    -fx-background-color: transparent; -fx-border-color: transparent;
+    -fx-text-fill: #94a3b8; -fx-background-radius: 8px; -fx-border-radius: 8px;
+    -fx-padding: 7 18; -fx-cursor: hand;
+}
+.aether-segmented-btn:hover { -fx-text-fill: #e2e8f0; -fx-background-color: rgba(255,255,255,0.05); }
+.aether-segmented-btn:selected {
+    -fx-background-color: rgba(255,255,255,0.10);
+    -fx-text-fill: #f8fafc;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 6, 0.2, 0, 1);
+}
+
+/* ---------- Empty state ---------- */
+.aether-empty {
+    -fx-alignment: center; -fx-spacing: 10; -fx-padding: 56 24 56 24;
+}
+.aether-empty-icon { -fx-font-size: 34px; -fx-text-fill: #475569; }
+.aether-empty-title {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #94a3b8;
+}
+.aether-empty-hint {
+    -fx-font-size: 12px; -fx-text-fill: #64748b; -fx-text-alignment: center;
+}
+
+/* ---------- Note editor ---------- */
+.note-editor-root { -fx-background-color: transparent; -fx-padding: 0; }
+.note-editor-header {
+    -fx-alignment: center-left; -fx-spacing: 12; -fx-padding: 20 34 8 34;
+}
+.note-back-btn {
+    -fx-background-color: transparent; -fx-border-color: transparent;
+    -fx-text-fill: #94a3b8; -fx-font-size: 13px; -fx-cursor: hand; -fx-padding: 6 8;
+}
+.note-back-btn:hover { -fx-text-fill: #f8fafc; -fx-background-color: rgba(255,255,255,0.06); -fx-background-radius: 8px; }
+.note-title-field {
+    -fx-font-size: 20px; -fx-font-weight: bold; -fx-background-color: transparent;
+    -fx-border-color: transparent; -fx-border-width: 0; -fx-padding: 4 0; -fx-prompt-text-fill: #475569;
+    -fx-text-fill: #f8fafc; -fx-min-width: 320;
+}
+.note-title-field:hover, .note-title-field:focused { -fx-border-color: transparent; -fx-effect: none; }
+
+.note-toolbar {
+    -fx-background-color: rgba(255,255,255,0.035);
+    -fx-background-radius: 10px; -fx-border-radius: 10px;
+    -fx-border-color: rgba(255,255,255,0.08); -fx-border-width: 1px;
+    -fx-padding: 5px; -fx-spacing: 2px; -fx-alignment: center-left;
+    -fx-min-height: 38;
+}
+.note-toolbar-btn {
+    -fx-background-color: transparent; -fx-border-color: transparent;
+    -fx-text-fill: #cbd5e1; -fx-font-size: 12px; -fx-font-weight: 600;
+    -fx-background-radius: 7px; -fx-border-radius: 7px; -fx-padding: 6 9; -fx-cursor: hand;
+}
+.note-toolbar-btn:hover { -fx-background-color: rgba(255,255,255,0.08); -fx-text-fill: #ffffff; }
+.note-toolbar-sep { -fx-text-fill: #334155; -fx-padding: 0 4; }
+.note-toolbar-spacer { -fx-min-width: 4px; }
+.note-mode-toggle {
+    -fx-background-color: rgba(255,255,255,0.05); -fx-background-radius: 8px;
+    -fx-border-radius: 8px; -fx-border-color: rgba(255,255,255,0.10); -fx-padding: 2; -fx-spacing: 2;
+}
+.note-mode-btn {
+    -fx-font-size: 11px; -fx-font-weight: bold; -fx-background-color: transparent;
+    -fx-border-color: transparent; -fx-text-fill: #94a3b8; -fx-background-radius: 6px;
+    -fx-border-radius: 6px; -fx-padding: 5 12; -fx-cursor: hand;
+}
+.note-mode-btn:selected { -fx-background-color: rgba(255,255,255,0.10); -fx-text-fill: #f8fafc; }
+
+.note-editor-area {
+    -fx-font-family: "Helvetica Neue","Segoe UI",Arial,sans-serif;
+    -fx-font-size: 14px; -fx-background-color: transparent;
+    -fx-border-color: transparent; -fx-border-width: 0;
+    -fx-text-fill: #e2e8f0; -fx-text-inner-color: #e2e8f0;
+    -fx-prompt-text-fill: #475569;
+    -fx-highlight-fill: rgba(129, 140, 248, 0.4);
+    -fx-highlight-text-fill: #ffffff;
+    -fx-padding: 8 34; -fx-wrap-text: true;
+    -fx-line-spacing: 1.4;
+}
+/* [Nota do polish pass] Sem isto, o TextArea mostra o ".content" interno
+   com o fundo branco por omissão do Modena — "-fx-background-color" no
+   próprio TextArea só pinta a moldura exterior, não a zona onde o texto
+   é desenhado. É esta a causa real do editor parecer "uma TextArea branca
+   dentro da app": faltavam aqui os mesmos overrides que ".area-texto" já
+   tinha (usados nos diálogos de Pessoa/Projeto/Tarefa). */
+.note-editor-area .scroll-pane,
+.note-editor-area .scroll-pane .viewport {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+.note-editor-area .content {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+}
+.note-editor-area .text {
+    -fx-fill: #e2e8f0;
+}
+
+.note-preview {
+    -fx-background-color: transparent; -fx-padding: 8 34; -fx-spacing: 6;
+}
+.note-preview .md-h1 { -fx-font-size: 22px; -fx-font-weight: bold; -fx-fill: #f8fafc; }
+.note-preview .md-h2 { -fx-font-size: 18px; -fx-font-weight: bold; -fx-fill: #e2e8f0; }
+.note-preview .md-h3 { -fx-font-size: 16px; -fx-font-weight: 600; -fx-fill: #e2e8f0; }
+.note-preview .md-body { -fx-font-size: 14px; -fx-fill: #cbd5e1; }
+.note-preview .md-quote { -fx-font-size: 14px; -fx-fill: #94a3b8; -fx-border-color: rgba(129,140,248,0.5); -fx-border-width: 0 0 0 3px 0; -fx-border-insets: 0 0 0 8; -fx-padding: 0 0 0 12; }
+.note-preview .md-code { -fx-font-family: "SF Mono","Menlo","Consolas",monospace; -fx-font-size: 13px; -fx-fill: #7dd3fc; -fx-background-color: rgba(255,255,255,0.05); -fx-background-radius: 4px; -fx-padding: 1 4; }
+.note-preview .md-link { -fx-fill: #22d3ee; -fx-underline: true; }
+.note-preview .md-muted { -fx-fill: #64748b; -fx-font-size: 12px; }
+
+.note-footer {
+    -fx-alignment: center-left; -fx-spacing: 10; -fx-padding: 8 34 18 34;
+    -fx-border-color: rgba(255,255,255,0.06); -fx-border-width: 1px 0 0 0;
+}
+
+/* ---------- Save state badge ---------- */
+.save-state { -fx-font-size: 11px; -fx-font-weight: 600; -fx-text-fill: #64748b; }
+.save-state-saving { -fx-text-fill: #94a3b8; }
+.save-state-saved   { -fx-text-fill: #7fd1b3; }
+.save-state-error   { -fx-text-fill: #f0a3a3; }
+
+/* ---------- AI understanding banner (post-save, async) ---------- */
+.ai-understanding {
+    -fx-background-color: rgba(129,140,248,0.08);
+    -fx-background-radius: 10px; -fx-border-radius: 10px;
+    -fx-border-color: rgba(129,140,248,0.22); -fx-border-width: 1px;
+    -fx-padding: 9 14; -fx-spacing: 9; -fx-alignment: center-left;
+}
+.ai-understanding-icon { -fx-text-fill: #a5b4fc; -fx-font-size: 13px; }
+.ai-understanding-text { -fx-font-size: 12px; -fx-text-fill: #cbd5e1; }
+.ai-understanding-done { -fx-text-fill: #7fd1b3; }
+
+/* ---------- Model status states ---------- */
+.model-state { -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 4 9; -fx-background-radius: 999px; }
+.model-state-selected   { -fx-background-color: rgba(34,211,238,0.16);  -fx-text-fill: #22d3ee; }
+.model-state-installed  { -fx-background-color: rgba(127,209,179,0.16); -fx-text-fill: #7fd1b3; }
+.model-state-available { -fx-background-color: rgba(255,255,255,0.06);  -fx-text-fill: #94a3b8; }
+.model-state-error      { -fx-background-color: rgba(240,163,163,0.16); -fx-text-fill: #f0a3a3; }
+
+
+/* Real pending-AI notification badge. */
+.dash-notification-badge {
+    -fx-min-width: 16px;
+    -fx-min-height: 16px;
+    -fx-padding: 1px 4px;
+    -fx-background-radius: 999px;
+    -fx-background-color: #22d3ee;
+    -fx-text-fill: #061018;
+    -fx-font-size: 9px;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER;
+}
+
+
+.search-popup {
+    -fx-background-color: rgba(10, 15, 26, 0.96);
+    -fx-background-radius: 14px;
+    -fx-border-color: rgba(34, 211, 238, 0.20);
+    -fx-border-radius: 14px;
+}
+.search-result-cell {
+    -fx-text-fill: #d6d6e8;
+    -fx-background-color: transparent;
+    -fx-padding: 9px 10px;
+}
+.search-result-cell:hover, .search-result-cell:selected {
+    -fx-background-color: rgba(34, 211, 238, 0.10);
+}
+
+.search-popup-title { -fx-text-fill: #cdd6f4; -fx-font-weight: bold; }
+
+.search-group-title { -fx-text-fill: #94a3b8; -fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 8px 4px 2px; }
+.search-results-scroll, .search-results-scroll > .viewport { -fx-background-color: transparent; }
+
+.dash-coming-soon { -fx-background-color: transparent; }
+.dash-coming-soon-icon { -fx-font-size: 48px; }
+.dash-coming-soon-title { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #e2e8f0; }
+.dash-coming-soon-hint { -fx-font-size: 13px; -fx-text-fill: #64748b; }
+
+/* ── Painel de notificações (sino) ─────────────────────────── */
+.notif-panel {
+    -fx-background-color: #0b1120;
+    -fx-border-color: rgba(56,189,248,0.18);
+    -fx-border-width: 1px;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.6), 28, 0.18, 0, 6);
+}
+.notif-panel-header {
+    -fx-text-fill: #e2e8f0;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 4px 0;
+}
+.notif-card {
+    -fx-background-color: rgba(30,41,59,0.55);
+    -fx-border-color: rgba(56,189,248,0.18);
+    -fx-border-width: 1px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-padding: 10px 12px;
+    -fx-spacing: 2px;
+}
+.notif-card-title { -fx-text-fill: #e2e8f0; -fx-font-size: 13px; -fx-font-weight: bold; }
+.notif-card-desc { -fx-text-fill: #94a3b8; -fx-font-size: 12px; }
+.notif-card-detail { -fx-text-fill: #67e8f9; -fx-font-size: 12px; -fx-font-weight: bold; }
+.notif-scroll { -fx-background-color: transparent; -fx-border-color: transparent; -fx-padding: 0; }
+.notif-scroll > .viewport { -fx-background-color: transparent; }
+.notif-scroll .scroll-bar:vertical { -fx-background-color: rgba(15,23,42,0.6); }

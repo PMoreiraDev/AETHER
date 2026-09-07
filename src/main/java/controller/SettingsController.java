@@ -18,9 +18,16 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import persistence.VaultManager;
 import session.UserSession;
 import util.OllamaService;
+import util.I18n;
+import util.AetherPreferences;
+import util.BackupService;
+import java.time.format.DateTimeFormatter;
+import java.time.Instant;
 
 /** Settings view for local AETHER AI model management. */
 public class SettingsController {
@@ -30,6 +37,8 @@ public class SettingsController {
     @FXML private TextField vaultPathField;
     @FXML private TextField ollamaPathField;
     @FXML private Label ollamaPathStatus;
+    @FXML private HBox languageSegmented;
+    @FXML private Label lastBackupLabel;
 
     private static final String[] MODEL_IDS = {
             "qwen2.5:14b",
@@ -41,6 +50,99 @@ public class SettingsController {
     private void initialize() {
         refresh();
         refreshFolderPaths();
+        populateAppearanceControls();
+    }
+
+    /** Preenche o controlo segmentado de idioma + info do último backup. */
+    private void populateAppearanceControls() {
+        buildLanguageSegmented();
+        refreshLastBackupLabel();
+    }
+
+    /** Controlo segmentado de idioma: Português / English. */
+    private void buildLanguageSegmented() {
+        if (languageSegmented == null) return;
+        languageSegmented.getChildren().clear();
+        ToggleGroup group = new ToggleGroup();
+        String lang = AetherPreferences.getLanguage();
+        boolean pt = "pt".equalsIgnoreCase(lang) || lang.isBlank();
+        ToggleButton ptBtn = segmentedButton(I18n.tr("settings.language.option.pt"), group, pt);
+        ToggleButton enBtn = segmentedButton(I18n.tr("settings.language.option.en"), group, !pt);
+        ptBtn.setOnAction(e -> {
+            I18n.setLocale(new java.util.Locale("pt", "PT"));
+            statusLabel.setText(I18n.tr("settings.language.changed"));
+        });
+        enBtn.setOnAction(e -> {
+            I18n.setLocale(new java.util.Locale("en"));
+            statusLabel.setText(I18n.tr("settings.language.changed"));
+        });
+        languageSegmented.getChildren().addAll(ptBtn, enBtn);
+    }
+
+    private ToggleButton segmentedButton(String text, ToggleGroup group, boolean selected) {
+        ToggleButton btn = new ToggleButton(text);
+        btn.setToggleGroup(group);
+        btn.getStyleClass().add("aether-segmented-btn");
+        btn.setSelected(selected);
+        return btn;
+    }
+
+    private void refreshLastBackupLabel() {
+        if (lastBackupLabel == null) return;
+        try {
+            var backups = java.nio.file.Files.list(BackupService.backupDirectory())
+                    .filter(f -> f.toString().endsWith(".zip"))
+                    .sorted((a, b) -> {
+                        try {
+                            return Long.compare(
+                                    java.nio.file.Files.getLastModifiedTime(b).toMillis(),
+                                    java.nio.file.Files.getLastModifiedTime(a).toMillis());
+                        } catch (Exception e) { return 0; }
+                    })
+                    .toList();
+            if (backups.isEmpty()) {
+                lastBackupLabel.setText(I18n.tr("settings.backup.lastNone"));
+            } else {
+                var ts = java.nio.file.Files.getLastModifiedTime(backups.get(0)).toInstant();
+                String when = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(java.time.ZoneId.systemDefault())
+                        .format(Instant.ofEpochSecond(ts.getEpochSecond()));
+                lastBackupLabel.setText(I18n.tr("settings.backup.lastDone", when));
+            }
+        } catch (Exception e) {
+            lastBackupLabel.setText(I18n.tr("settings.backup.lastNone"));
+        }
+    }
+
+    /** Idioma — aplicado imediatamente pelo controlo segmentado. */
+    @FXML private void handleChangeLanguage() {
+        statusLabel.setText(I18n.tr("settings.language.changed"));
+    }
+
+    /** Cria uma cópia de segurança zip do vault (em segundo plano). */
+    @FXML private void handleCreateBackup() {
+        statusLabel.setText(I18n.tr("settings.backup.creating"));
+        Task<Path> task = new Task<>() {
+            @Override protected Path call() throws Exception {
+                return BackupService.createBackup();
+            }
+        };
+        task.setOnSucceeded(e -> {
+            statusLabel.setText(I18n.tr("settings.backup.created", task.getValue().getFileName().toString()));
+            refreshLastBackupLabel();
+        });
+        task.setOnFailed(e -> {
+            Throwable err = task.getException();
+            statusLabel.setText(I18n.tr("settings.backup.failed",
+                    err != null && err.getMessage() != null ? err.getMessage() : "erro"));
+        });
+        Thread t = new Thread(task, "aether-backup");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /** Abre a pasta das cópias de segurança no gestor de ficheiros. */
+    @FXML private void handleOpenBackupsFolder() {
+        openInFileExplorer(BackupService.backupDirectory(), false);
     }
 
     /** Reloads model state from Ollama and the persisted application settings. */
@@ -51,7 +153,7 @@ public class SettingsController {
 
     private void refresh() {
         String active = UserSession.getInstance().getAppSettings().getActiveModelId();
-        activeModelLabel.setText(active == null || active.isBlank() ? "No model selected" : active);
+        activeModelLabel.setText(active == null || active.isBlank() ? I18n.tr("settings.activeModel.none") : active);
         modelsContainer.getChildren().clear();
 
         Task<List<String>> task = new Task<>() {
@@ -93,16 +195,32 @@ public class SettingsController {
         names.getChildren().addAll(name, id);
         HBox.setHgrow(names, javafx.scene.layout.Priority.ALWAYS);
 
-        Label badge = new Label(selected ? "ACTIVE" : downloaded ? "DOWNLOADED" : "AVAILABLE");
-        badge.getStyleClass().addAll("settings-model-badge", selected ? "settings-model-badge-active" : "");
+        // Estado humanizado: não mostrar "Download" quando já está instalado;
+        // o utilizador nunca vê "ACTIVE/DOWNLOADED" em maiúsculas cru.
+        String stateKey = selected ? "settings.model.state.selected"
+                : downloaded ? "settings.model.state.installed"
+                : "settings.model.state.available";
+        Label badge = new Label(I18n.tr(stateKey));
+        badge.getStyleClass().addAll("model-state",
+                selected ? "model-state-selected"
+                        : downloaded ? "model-state-installed" : "model-state-available");
         top.getChildren().addAll(names, badge);
 
         Label description = new Label(description(modelId));
         description.setWrapText(true);
         description.getStyleClass().add("settings-model-description");
 
-        Button action = new Button(selected ? "Active" : downloaded ? "Use model" : "Download");
-        action.getStyleClass().add(selected ? "settings-secondary-btn" : "settings-primary-btn");
+        Button action = new Button(selected ? I18n.tr("settings.model.state.selected")
+                : downloaded ? I18n.tr("settings.model.action.use") : I18n.tr("settings.model.action.download"));
+        // [CORRIGIDO] "getStyleClass().add("a b")" adiciona UMA classe com espaço,
+        // que o JavaFX não separa — os seletores .aether-btn / .aether-btn-primary
+        // não aplicavam e o botão ficava com o visual Modena (desformatado).
+        // Tem de ser addAll com classes separadas.
+        if (selected) {
+            action.getStyleClass().addAll("aether-btn", "aether-btn-secondary");
+        } else {
+            action.getStyleClass().addAll("aether-btn", "aether-btn-primary");
+        }
         action.setDisable(selected);
 
         // Barra de progresso e label de percentagem, escondidas por omissão e

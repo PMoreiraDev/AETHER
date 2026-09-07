@@ -58,6 +58,9 @@ public class UserProfile {
      * livremente informações sobre si próprio que considera importantes para a
      * IA conhecer. Nunca {@code null}.
      */
+    /** Localização atual ou habitual do utilizador; nunca {@code null}. */
+    private String location = "";
+
     private String aiContext = "";
 
     /** Local path to the user's profile photo; empty when no photo is set. */
@@ -280,6 +283,10 @@ public class UserProfile {
      *
      * @return o contexto de IA, ou string vazia se não definido
      */
+    public String getLocation() { return location; }
+
+    public void setLocation(String location) { this.location = location != null ? location : ""; }
+
     public String getAiContext() {
         return aiContext;
     }
@@ -463,6 +470,7 @@ public class UserProfile {
         appendContextLine(context, "Interests", interests);
         appendContextLine(context, "Objectives", objectives);
         appendContextLine(context, "Preferences", preferences);
+        appendContextLine(context, "Location", location);
         appendContextLine(context, "Projects", projects);
         appendContextLine(context, "Work style", workStyle);
 
@@ -473,16 +481,15 @@ public class UserProfile {
         }
 
         if (inferredContext != null && !inferredContext.isBlank()) {
-            context.append("\nINFERRED CONTEXT (AI-generated, not confirmed by user)\n");
+            context.append("\nINFERRED CONTEXT (accepted from conversations)\n");
             context.append(inferredContext.trim());
             context.append('\n');
         }
 
-        if (suggestedUpdates != null && !suggestedUpdates.isBlank()) {
-            context.append("\nSUGGESTED PROFILE UPDATES (pending user confirmation)\n");
-            context.append(suggestedUpdates.trim());
-            context.append('\n');
-        }
+        // NOTA (spec #11): as sugestões pendentes NÃO vêm mais daqui. A fonte
+        // única de propostas pendentes é o ProposalStore (persistido), lido pela
+        // UI de aprovação. O campo suggestedUpdates é legado e mantém-se apenas
+        // por retrocompatibilidade de persistência — nunca é enviado à IA.
 
         return context.toString().trim();
     }
