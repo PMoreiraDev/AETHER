@@ -1,0 +1,240 @@
+<svg viewBox="0 0 1200 1500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#080A12"/>
+      <stop offset="100%" stop-color="#0C1019"/>
+    </linearGradient>
+
+    <linearGradient id="panel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#151A26"/>
+      <stop offset="100%" stop-color="#10141F"/>
+    </linearGradient>
+
+    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="50%" stop-color="#CBD0D9"/>
+      <stop offset="100%" stop-color="#868C99"/>
+    </linearGradient>
+
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#AEB4C2"/>
+    </marker>
+
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#34D399"/>
+    </marker>
+
+    <marker id="arrowMuted" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#6C7386"/>
+    </marker>
+
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="1500" fill="url(#bg)"/>
+
+  <!-- Header -->
+  <text x="600" y="54" font-family="'Helvetica Neue', Arial, sans-serif"
+        font-size="16" fill="#8B92A2" letter-spacing="4" text-anchor="middle">
+    HOW AETHER TURNS YOUR LIFE INTO CONTEXT
+  </text>
+  <text x="600" y="88" font-family="'Helvetica Neue', Arial, sans-serif"
+        font-size="29" font-weight="700" fill="#F2F3F5" text-anchor="middle">
+    One system. Infinite use cases. Your context, your way.
+  </text>
+  <text x="600" y="116" font-family="'Helvetica Neue', Arial, sans-serif"
+        font-size="14" fill="#7F8798" text-anchor="middle">
+    Local data → connected context → local intelligence → controlled action
+  </text>
+
+  <g font-family="'Helvetica Neue', Arial, sans-serif" text-anchor="middle">
+
+    <!-- STEP 1 -->
+    <text x="70" y="158" font-size="12" font-weight="700" fill="#8B92A2" letter-spacing="3" text-anchor="start">
+      01 · YOUR WORLD
+    </text>
+
+    <rect x="70" y="174" width="1060" height="160" rx="20"
+          fill="#10141F" stroke="#2E3345" stroke-width="1.5"/>
+
+    <!-- entity cards -->
+    <g>
+      <rect x="92" y="202" width="138" height="54" rx="11" fill="#141926" stroke="#343A4C"/>
+      <text x="161" y="224" font-size="15" font-weight="700" fill="#EDEFF3">People</text>
+      <text x="161" y="243" font-size="11" fill="#7F8798">relationships</text>
+
+      <rect x="244" y="202" width="138" height="54" rx="11" fill="#141926" stroke="#343A4C"/>
+      <text x="313" y="224" font-size="15" font-weight="700" fill="#EDEFF3">Projects</text>
+      <text x="313" y="243" font-size="11" fill="#7F8798">work and initiatives</text>
+
+      <rect x="396" y="202" width="138" height="54" rx="11" fill="#141926" stroke="#343A4C"/>
+      <text x="465" y="224" font-size="15" font-weight="700" fill="#EDEFF3">Tasks</text>
+      <text x="465" y="243" font-size="11" fill="#7F8798">next actions</text>
+
+      <rect x="548" y="202" width="138" height="54" rx="11" fill="#141926" stroke="#343A4C"/>
+      <text x="617" y="224" font-size="15" font-weight="700" fill="#EDEFF3">Goals</text>
+      <text x="617" y="243" font-size="11" fill="#7F8798">direction and progress</text>
+
+      <rect x="700" y="202" width="138" height="54" rx="11" fill="#141926" stroke="#343A4C"/>
+      <text x="769" y="224" font-size="15" font-weight="700" fill="#EDEFF3">Events</text>
+      <text x="769" y="243" font-size="11" fill="#7F8798">time and commitments</text>
+
+      <rect x="852" y="202" width="138" height="54" rx="11" fill="#141926" stroke="#343A4C"/>
+      <text x="921" y="224" font-size="15" font-weight="700" fill="#EDEFF3">Notes</text>
+      <text x="921" y="243" font-size="11" fill="#7F8798">free-form knowledge</text>
+
+      <rect x="1004" y="202" width="104" height="54" rx="11" fill="#141926" stroke="#343A4C"/>
+      <text x="1056" y="224" font-size="15" font-weight="700" fill="#EDEFF3">Memory</text>
+      <text x="1056" y="243" font-size="11" fill="#7F8798">long-term context</text>
+    </g>
+
+    <text x="600" y="296" font-size="12" fill="#6C7386">
+      AETHER is not tied to one profession — the same core adapts to your world.
+    </text>
+
+    <!-- arrow -->
+    <line x1="600" y1="334" x2="600" y2="374" stroke="#AEB4C2" stroke-width="2" stroke-opacity="0.65" marker-end="url(#arrow)"/>
+
+    <!-- STEP 2 -->
+    <text x="70" y="400" font-size="12" font-weight="700" fill="#8B92A2" letter-spacing="3" text-anchor="start">
+      02 · YOUR LOCAL FOUNDATION
+    </text>
+
+    <rect x="170" y="416" width="860" height="116" rx="20"
+          fill="url(#panel)" stroke="url(#border)" stroke-width="1.8"/>
+
+    <text x="600" y="449" font-size="21" font-weight="700" fill="#F2F3F5">Local Vault</text>
+    <text x="600" y="471" font-size="12" fill="#8B92A2">Markdown + YAML · SQLite · local files</text>
+
+    <g>
+      <rect x="230" y="490" width="150" height="24" rx="8" fill="#10141F" stroke="#343A4C"/>
+      <text x="305" y="507" font-size="11" fill="#C9CDD6">Human-readable data</text>
+
+      <rect x="395" y="490" width="150" height="24" rx="8" fill="#10141F" stroke="#343A4C"/>
+      <text x="470" y="507" font-size="11" fill="#C9CDD6">Local ownership</text>
+
+      <rect x="560" y="490" width="150" height="24" rx="8" fill="#10141F" stroke="#343A4C"/>
+      <text x="635" y="507" font-size="11" fill="#C9CDD6">Live file watching</text>
+
+      <rect x="725" y="490" width="150" height="24" rx="8" fill="#10141F" stroke="#343A4C"/>
+      <text x="800" y="507" font-size="11" fill="#C9CDD6">Obsidian-compatible</text>
+    </g>
+
+    <line x1="600" y1="532" x2="600" y2="572" stroke="#AEB4C2" stroke-width="2" stroke-opacity="0.65" marker-end="url(#arrow)"/>
+
+    <!-- STEP 3 -->
+    <text x="70" y="598" font-size="12" font-weight="700" fill="#8B92A2" letter-spacing="3" text-anchor="start">
+      03 · AETHER BUILDS CONTEXT
+    </text>
+
+    <rect x="90" y="614" width="1020" height="184" rx="22"
+          fill="#0F141F" stroke="#2E3345" stroke-width="1.5"/>
+
+    <!-- Context Graph -->
+    <rect x="116" y="644" width="286" height="112" rx="16" fill="#141A26" stroke="#475066"/>
+    <text x="259" y="675" font-size="19" font-weight="700" fill="#F2F3F5">Context Graph</text>
+    <text x="259" y="698" font-size="12" fill="#9AA0B2">relationships between</text>
+    <text x="259" y="717" font-size="12" fill="#9AA0B2">people · projects · tasks · goals</text>
+    <text x="259" y="736" font-size="12" fill="#9AA0B2">notes · events · memory</text>
+
+    <!-- Context Engine -->
+    <rect x="457" y="644" width="286" height="112" rx="16" fill="#141A26" stroke="url(#border)" stroke-width="2"/>
+    <text x="600" y="675" font-size="19" font-weight="700" fill="#F2F3F5">Context Engine</text>
+    <text x="600" y="698" font-size="12" fill="#9AA0B2">retrieves · ranks · resolves</text>
+    <text x="600" y="717" font-size="12" fill="#9AA0B2">assembles the context needed</text>
+    <text x="600" y="736" font-size="12" fill="#9AA0B2">for the current situation</text>
+
+    <!-- Memory / profile -->
+    <rect x="798" y="644" width="286" height="112" rx="16" fill="#141A26" stroke="#475066"/>
+    <text x="941" y="675" font-size="19" font-weight="700" fill="#F2F3F5">Profile and Memory</text>
+    <text x="941" y="698" font-size="12" fill="#9AA0B2">persistent preferences</text>
+    <text x="941" y="717" font-size="12" fill="#9AA0B2">past decisions and useful context</text>
+    <text x="941" y="736" font-size="12" fill="#9AA0B2">visible · editable · deletable</text>
+
+    <!-- internal arrows -->
+    <line x1="402" y1="700" x2="457" y2="700" stroke="#7F8798" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="743" y1="700" x2="798" y2="700" stroke="#7F8798" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <text x="600" y="782" font-size="11" fill="#6C7386">
+      AETHER does not need the whole vault for every question — it assembles what matters.
+    </text>
+
+    <line x1="600" y1="798" x2="600" y2="838" stroke="#AEB4C2" stroke-width="2" stroke-opacity="0.65" marker-end="url(#arrow)"/>
+
+    <!-- STEP 4 -->
+    <text x="70" y="864" font-size="12" font-weight="700" fill="#8B92A2" letter-spacing="3" text-anchor="start">
+      04 · LOCAL INTELLIGENCE
+    </text>
+
+    <rect x="250" y="880" width="700" height="120" rx="20"
+          fill="url(#panel)" stroke="url(#border)" stroke-width="2.2"
+          filter="url(#softGlow)"/>
+
+    <text x="600" y="914" font-size="14" fill="#9BA1AF" letter-spacing="2" font-weight="600">OLLAMA · LOCAL AI</text>
+    <text x="600" y="944" font-size="23" font-weight="700" fill="#F2F3F5">Reason over the context, not a blank chat.</text>
+    <text x="600" y="969" font-size="12" fill="#8B92A2">
+      The selected context is assembled locally and sent to your configured local model.
+    </text>
+
+    <line x1="600" y1="1000" x2="600" y2="1040" stroke="#AEB4C2" stroke-width="2" stroke-opacity="0.65" marker-end="url(#arrow)"/>
+
+    <!-- STEP 5 -->
+    <text x="70" y="1066" font-size="12" font-weight="700" fill="#8B92A2" letter-spacing="3" text-anchor="start">
+      05 · RESPOND OR PROPOSE
+    </text>
+
+    <!-- Reply branch -->
+    <rect x="90" y="1082" width="430" height="126" rx="18" fill="#102823" stroke="#22D3EE" stroke-width="1.8"/>
+    <text x="305" y="1114" font-size="20" font-weight="700" fill="#EDEFF3">Conversational Answer</text>
+    <text x="305" y="1137" font-size="12" fill="#A5B7B8">The answer is returned to you.</text>
+    <text x="305" y="1160" font-size="12" fill="#8EA0A4">Nothing is changed merely because AETHER</text>
+    <text x="305" y="1179" font-size="12" fill="#8EA0A4">generated a response.</text>
+
+    <!-- Action branch -->
+    <rect x="680" y="1082" width="430" height="126" rx="18" fill="#141926" stroke="#475066" stroke-width="1.6"/>
+    <text x="895" y="1114" font-size="20" font-weight="700" fill="#F2F3F5">Potential Action</text>
+    <text x="895" y="1137" font-size="12" fill="#9AA0B2">When a change is identified, AETHER</text>
+    <text x="895" y="1158" font-size="12" fill="#9AA0B2">extracts and validates the requested action.</text>
+    <text x="895" y="1179" font-size="12" fill="#7F8798">It does not silently write to your data.</text>
+
+    <!-- branch arrows -->
+    <line x1="520" y1="1048" x2="305" y2="1080" stroke="#AEB4C2" stroke-width="2" marker-end="url(#arrow)"/>
+    <line x1="680" y1="1048" x2="895" y2="1080" stroke="#AEB4C2" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Action pipeline -->
+    <line x1="895" y1="1208" x2="895" y2="1244" stroke="#AEB4C2" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="735" y="1246" width="320" height="70" rx="15" fill="#12161F" stroke="#2E3345"/>
+    <text x="895" y="1274" font-size="17" font-weight="700" fill="#F2F3F5">Validate → Propose</text>
+    <text x="895" y="1297" font-size="11" fill="#8B92A2">reason · source · target · proposed change</text>
+
+    <line x1="895" y1="1316" x2="895" y2="1350" stroke="#AEB4C2" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <!-- Decision -->
+    <rect x="745" y="1352" width="300" height="64" rx="32" fill="#12161F" stroke="url(#border)" stroke-width="1.8"/>
+    <text x="895" y="1390" font-size="17" font-weight="800" fill="#F2F3F5" letter-spacing="1.2">YOU DECIDE</text>
+
+    <!-- reject / approve -->
+    <line x1="825" y1="1417" x2="765" y2="1450" stroke="#6C7386" stroke-width="2" marker-end="url(#arrowMuted)"/>
+    <text x="706" y="1449" font-size="11" fill="#6C7386">reject</text>
+
+    <line x1="965" y1="1417" x2="1025" y2="1450" stroke="#34D399" stroke-width="2.2" marker-end="url(#arrowGreen)"/>
+    <text x="1040" y="1449" font-size="11" fill="#34D399" text-anchor="start">approve</text>
+
+    <text x="600" y="1478" font-size="11" fill="#5F6778">
+      Approved changes are executed and written back to the local system.
+    </text>
+
+  </g>
+</svg>
