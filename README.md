@@ -190,11 +190,14 @@ Every entity shares a common identity and audit layer: a stable UUID, and creati
 
 **AETHER is local-first by construction, not by policy.** There is no server component in the current application; every entity, every profile field, and every AI conversation is processed on your machine.
 
-- Your vault is a folder of plain Markdown files on your own disk, readable with any text editor, not locked into a proprietary format.
-- Your profile, settings, and chat sessions live in a local SQLite database, stored in the standard per-OS application data folder (`%APPDATA%` on Windows, `~/Library/Application Support` on macOS, `$XDG_DATA_HOME` or `~/.local/share` on Linux).
+- **SQLite is the single source of truth.** Entities (people, events, tasks, notes, projects), your profile, settings, and full AI conversation history live in a local SQLite database (WAL mode, versioned schema with automatic pre-migration backups), stored at `%APPDATA%\AETHER\AETHER.db` on Windows or `~/AETHER/AETHER.db` on macOS/Linux.
+- **The Obsidian vault is a projection, not the database.** Every entity is also written as a plain Markdown file (stable id in the frontmatter) so the vault stays readable in any text editor — but you can stop using Obsidian, or lose the vault folder, without losing any data: AETHER re-projects the files from SQLite. Edits made in Obsidian are imported back automatically.
+- Your conversations survive restarts: the message you type is persisted **before** the AI even starts replying, so a crash or an offline model never loses what you wrote. Starting a "new conversation" never deletes the old one.
 - The AI is a locally-run Ollama model. AETHER manages installing it, listing models, and picking sensible defaults based on your machine's available memory, no API key, no subscription, no cloud inference required for the core product to work.
-- Backups are local zip archives; nothing is uploaded anywhere by AETHER itself.
+- Backups are local zip archives (WAL-checkpointed, so they always contain every committed transaction); nothing is uploaded anywhere by AETHER itself. Schema upgrades automatically back the database up before touching it.
 - Vault content passed to the AI is explicitly framed in the system prompt as data to reason about, not instructions to obey, a deliberate protection against malicious or accidental prompt injection hidden in your own notes.
+
+For the full ownership model, synchronization semantics, schema history, and security guarantees, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -204,7 +207,7 @@ Every entity shares a common identity and audit layer: a stable UUID, and creati
 |---|---|
 | Language | Java 21 |
 | Desktop UI | JavaFX 21.0.6 (FXML + CSS) |
-| Persistence | SQLite (via the `sqlite-jdbc` driver) + a Markdown/YAML file vault |
+| Persistence | SQLite (WAL, versioned migrations) as source of truth + a Markdown/YAML vault as the Obsidian projection |
 | Local AI runtime | Ollama, managed and orchestrated by AETHER |
 | Note-taking companion | Obsidian *(optional)*, the vault is plain Markdown + wikilinks, so it opens natively in Obsidian; not required to run AETHER |
 | Build | Maven, packaged via `maven-assembly-plugin` into a self-contained distribution |

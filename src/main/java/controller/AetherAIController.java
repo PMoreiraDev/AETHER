@@ -109,15 +109,6 @@ public class AetherAIController implements Initializable {
             java.util.concurrent.CompletableFuture.completedFuture(null);
 
     /**
-     * Histórico da conversa, persistido entre trocas de vista através do
-     * {@link session.ChatSession}. Sem isto, mudar de vista (ex.: ir ao
-     * Dashboard e voltar) recriaria o controlador e apagaria a conversa. A
-     * conversa só é reiniciada quando o utilizador clica em "Nova conversa".
-     */
-    private final List<OllamaService.ChatMessage> conversationHistory =
-            session.ChatSession.getInstance().getHistory();
-
-    /**
      * Modelo ativo de facto, resolvido em {@link #warmUpEngine} contra o que
      * está realmente instalado — pode diferir do valor guardado em
      * {@link domain.AppSettings#getActiveModelId()} se esse modelo não tiver
@@ -271,8 +262,13 @@ public class AetherAIController implements Initializable {
      * a mensagem de boas-vindas.
      */
     private void restoreConversation() {
-        if (!conversationHistory.isEmpty()) {
-            for (OllamaService.ChatMessage m : conversationHistory) {
+        // historyForUi(): restaura as mensagens mais recentes (o histórico
+        // completo permanece na base de dados — não renderizamos anos de
+        // conversa de uma só vez).
+        List<OllamaService.ChatMessage> restored =
+                session.ChatSession.getInstance().historyForUi();
+        if (!restored.isEmpty()) {
+            for (OllamaService.ChatMessage m : restored) {
                 boolean isUser = "user".equals(m.getRole());
                 addMessage(isUser ? "You" : "AETHER", m.getContent(), isUser);
             }
@@ -399,6 +395,13 @@ public class AetherAIController implements Initializable {
         // utilizador revê depois pelo sino → Profile.
         detectPersonalInfoImmediately(message.trim());
 
+        // Persistência ANTES da chamada à IA (Spec §49/§55): a mensagem do
+        // utilizador é gravada no SQLite no momento em que existe — um crash
+        // da aplicação, uma falha do Ollama ou um reinício nunca perdem o que
+        // o utilizador escreveu. A resposta da IA só é acrescentada (e
+        // persistida) quando realmente chega.
+        ChatSession.getInstance().addUserMessage(message.trim());
+
         // Limpa o input e bloqueia
         inputField.clear();
         setAwaiting(true);
@@ -430,10 +433,12 @@ public class AetherAIController implements Initializable {
                 new java.util.concurrent.atomic.AtomicBoolean(true);
 
         // Snapshot do histórico antes da thread de fundo para evitar
-        // mutação concorrente enquanto a resposta é gerada.
-        List<OllamaService.ChatMessage> requestHistory = new ArrayList<>(conversationHistory);
-        // Adiciona a mensagem atual do utilizador ao snapshot enviado à IA.
-        requestHistory.add(new OllamaService.ChatMessage("user", message.trim()));
+        // mutação concorrente enquanto a resposta é gerada. historyForLlm()
+        // devolve a janela limitada (últimos turnos) e JÁ inclui a mensagem
+        // do utilizador persistida acima — o histórico completo vive na base
+        // de dados, não é enviado por inteiro ao modelo.
+        List<OllamaService.ChatMessage> requestHistory =
+                ChatSession.getInstance().historyForLlm();
 
         // Tarefa de fundo para chamar o Ollama. Se nada for recebido, o
         // próprio fio de fundo faz o diagnóstico (evita nova ronda de rede no
@@ -452,7 +457,17 @@ public class AetherAIController implements Initializable {
                 // Isto resolve perguntas de seguimento como "e o trabalho
                 // dele?" — a mensagem atual não menciona "Rafael", mas o
                 // turno anterior sim, pelo que o contexto certo é recuperado.
-                String contextQuery = buildContextQuery(message.trim(), conversationHistory);
+                //
+                // Nota: a mensagem atual JÁ foi persistida (é o último
+                // elemento do histórico), pelo que aqui se exclui para não a
+                // duplicar na consulta.
+                java.util.List<OllamaService.ChatMessage> historyBeforeCurrent =
+                        ChatSession.getInstance().getHistory();
+                if (!historyBeforeCurrent.isEmpty()) {
+                    historyBeforeCurrent = historyBeforeCurrent.subList(
+                            0, historyBeforeCurrent.size() - 1);
+                }
+                String contextQuery = buildContextQuery(message.trim(), historyBeforeCurrent);
                 // Spec #16: o primeiro pedido da conversa aguarda (≤5s) a
                 // preparação do contexto do utilizador — READY → THEN AI request.
                 try {
@@ -487,12 +502,11 @@ public class AetherAIController implements Initializable {
 
         chatTask.setOnSucceeded(e -> {
             stopThinkingOrb();
-            // Só guarda a resposta no histórico se realmente foi recebida,
-            // para não corromper a memória com respostas vazias. Grava no
-            // ChatSession para a conversa persistir entre trocas de vista.
+            // A mensagem do utilizador JÁ foi persistida antes da chamada ao
+            // modelo. Aqui só se acrescenta a resposta — e apenas se realmente
+            // foi recebida, para não corromper a memória com respostas vazias.
             String reply = fullReply.toString().trim();
             if (!reply.isBlank()) {
-                ChatSession.getInstance().addUserMessage(message.trim());
                 ChatSession.getInstance().addAssistantMessage(reply);
             }
             setAwaiting(false);
@@ -718,7 +732,8 @@ public class AetherAIController implements Initializable {
         // ou quando este não reconhece uma afirmação sobre o utilizador. O
         // fallback só acrescenta campos de perfil que o Ollama ainda não cobriu
         // — evita propostas duplicadas. Tudo entra no mesmo pipeline.
-        ActionExtractor ollama = new OllamaActionExtractor(activeModelId, () -> conversationHistory);
+        ActionExtractor ollama = new OllamaActionExtractor(activeModelId,
+                ChatSession.getInstance()::historyForLlm);
         ActionExtractor fallback = new ai.PersonalInfoFallbackExtractor();
         ActionExtractor composite = (userMessage1, reply1) -> {
             java.util.List<ParsedAction> out = new java.util.ArrayList<>();

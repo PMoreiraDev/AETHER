@@ -30,25 +30,31 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+
 import java.util.stream.Stream;
 
 /**
- * VaultManager — gestor do vault de notas do AETHER.
+ * VaultManager — fachada única para as entidades do AETHER (Person, Event,
+ * Task, Note, Project).
  * <p>
- * Lê e escreve ficheiros markdown com YAML frontmatter no vault do AETHER.
- * O vault é uma pasta no sistema de ficheiros que pode ser aberta no Obsidian
- * para visualização do grafo, mas o AETHER funciona independentemente do
- * Obsidian estar ou não instalado.
+ * <b>Modelo de propriedade de dados (desde a migração de esquema v3):</b>
+ * o repositório SQLite ({@link SqliteEntityRepository}) é a FONTE DA
+ * VERDADE; o vault de ficheiros markdown é uma PROJEÇÃO otimizada para
+ * leitura e edição humana no Obsidian. Toda a mutação passa por esta classe:
+ * grava no SQLite primeiro (por id estável) e só depois projeta o ficheiro.
+ * Se o vault falhar, ficar indisponível ou for apagado, os dados continuam
+ * intactos no SQLite e a projeção é recriada pelo {@link EntitySynchronizer}
+ * (no arranque) ou pelo watcher (em tempo real).
  * </p>
  * <p>
- * Cada entidade (Person, Event, Task, Note, Project) é armazenada como um
- * ficheiro .md com frontmatter YAML (dados estruturados) e wikilinks {@code [[ ]}
- * (relações entre entidades).
+ * Cada entidade é projetada como um ficheiro .md com frontmatter YAML
+ * (dados estruturados, id estável) e wikilinks {@code [[ ]]} (relações).
+ * Edições feitas no Obsidian são reimportadas para o SQLite via comparação
+ * de hash — o AETHER continua a funcionar com ou sem Obsidian.
  * </p>
  *
  * @author Paulo Moreira
- * @version 1.0
+ * @version 2.0
  */
 public final class VaultManager {
     private static final Logger LOGGER = Logger.getLogger(VaultManager.class.getName());
@@ -155,16 +161,19 @@ public final class VaultManager {
     // ------------------------------------------------------------------
 
     /**
-     * Guarda uma pessoa no vault como ficheiro markdown.
+     * Guarda uma pessoa. SQLite é a fonte da verdade (o repositório é
+     * escrito PRIMEIRO); o ficheiro markdown no vault é uma projeção para o
+     * Obsidian — se a projeção falhar, a entidade continua guardada e o
+     * ficheiro é recriado na sincronização seguinte.
      *
      * @param person a pessoa a guardar
-     * @return o caminho do ficheiro criado, ou {@code null} se falhou
+     * @return o caminho do ficheiro projetado no vault
      */
     public static Path savePerson(Person person) {
         ensureVault();
+        entityRepository().upsertPerson(person);
         String filename = sanitizeFilename(person.getName()) + MD_EXT;
         Path dir = getVaultPath().resolve(PEOPLE_DIR);
-        removeStaleFiles(dir, person.getId(), filename);
         Path file = dir.resolve(filename);
 
         Map<String, String> frontmatter = new HashMap<>();
@@ -179,22 +188,30 @@ public final class VaultManager {
         frontmatter.put("created", person.getCreatedAt() != null ? person.getCreatedAt().format(DATETIME_FMT) : "");
         frontmatter.put("updated", person.getUpdatedAt() != null ? person.getUpdatedAt().format(DATETIME_FMT) : "");
 
+        // Preserva chaves de frontmatter definidas pelo utilizador (spec:
+        // chaves desconhecidas DEVEM sobreviver às re-projeções). Antes de
+        // removeStaleFiles para que o ficheiro antigo (rename) ainda exista.
+        mergeCustomFrontmatter("person", PEOPLE_DIR, person.getId(), frontmatter);
+        removeStaleFiles(dir, person.getId(), filename);
+
         StringBuilder body = new StringBuilder();
         body.append("# ").append(person.getName()).append("\n\n");
         if (!person.getAbout().isBlank()) {
             body.append(person.getAbout()).append("\n");
         }
 
-        return writeMarkdown(file, frontmatter, body.toString());
+        return project(file, frontmatter, body.toString());
     }
 
     /**
-     * Lista todas as pessoas no vault.
+     * Lista todas as pessoas (do repositório SQLite — fonte da verdade;
+     * sincronizado com o vault no arranque e pelo watcher).
      *
      * @return lista de pessoas, vazia se não houver
      */
     public static List<Person> listPeople() {
-        return listEntities(PEOPLE_DIR, VaultManager::parsePerson);
+        ensureVault(); // sincroniza vault ↔ SQLite (uma vez por sessão/vault)
+        return entityRepository().listPeople();
     }
 
     /**
@@ -219,16 +236,17 @@ public final class VaultManager {
     // ------------------------------------------------------------------
 
     /**
-     * Guarda um evento no vault.
+     * Guarda um evento. SQLite primeiro (fonte da verdade); vault como
+     * projeção.
      *
      * @param event o evento a guardar
-     * @return o caminho do ficheiro, ou {@code null} se falhou
+     * @return o caminho do ficheiro projetado no vault
      */
     public static Path saveEvent(Event event) {
         ensureVault();
+        entityRepository().upsertEvent(event);
         String filename = sanitizeFilename(event.getTitle()) + MD_EXT;
         Path dir = getVaultPath().resolve(EVENTS_DIR);
-        removeStaleFiles(dir, event.getId(), filename);
         Path file = dir.resolve(filename);
 
         Map<String, String> fm = new HashMap<>();
@@ -246,22 +264,26 @@ public final class VaultManager {
         fm.put("created", event.getCreatedAt() != null ? event.getCreatedAt().format(DATETIME_FMT) : "");
         fm.put("updated", event.getUpdatedAt() != null ? event.getUpdatedAt().format(DATETIME_FMT) : "");
 
+        mergeCustomFrontmatter("event", EVENTS_DIR, event.getId(), fm);
+        removeStaleFiles(dir, event.getId(), filename);
+
         StringBuilder body = new StringBuilder();
         body.append("# ").append(event.getTitle()).append("\n\n");
         if (!event.getDescription().isBlank()) {
             body.append(event.getDescription()).append("\n");
         }
 
-        return writeMarkdown(file, fm, body.toString());
+        return project(file, fm, body.toString());
     }
 
     /**
-     * Lista todos os eventos no vault.
+     * Lista todos os eventos (do repositório SQLite — fonte da verdade).
      *
      * @return lista de eventos
      */
     public static List<Event> listEvents() {
-        return listEntities(EVENTS_DIR, VaultManager::parseEvent);
+        ensureVault(); // sincroniza vault ↔ SQLite (uma vez por sessão/vault)
+        return entityRepository().listEvents();
     }
 
     // ------------------------------------------------------------------
@@ -269,16 +291,17 @@ public final class VaultManager {
     // ------------------------------------------------------------------
 
     /**
-     * Guarda uma tarefa no vault.
+     * Guarda uma tarefa. SQLite primeiro (fonte da verdade); vault como
+     * projeção.
      *
      * @param task a tarefa a guardar
-     * @return o caminho do ficheiro, ou {@code null} se falhou
+     * @return o caminho do ficheiro projetado no vault
      */
     public static Path saveTask(Task task) {
         ensureVault();
+        entityRepository().upsertTask(task);
         String filename = sanitizeFilename(task.getTitle()) + MD_EXT;
         Path dir = getVaultPath().resolve(TASKS_DIR);
-        removeStaleFiles(dir, task.getId(), filename);
         Path file = dir.resolve(filename);
 
         Map<String, String> fm = new HashMap<>();
@@ -294,22 +317,26 @@ public final class VaultManager {
         fm.put("created", task.getCreatedAt() != null ? task.getCreatedAt().format(DATETIME_FMT) : "");
         fm.put("updated", task.getUpdatedAt() != null ? task.getUpdatedAt().format(DATETIME_FMT) : "");
 
+        mergeCustomFrontmatter("task", TASKS_DIR, task.getId(), fm);
+        removeStaleFiles(dir, task.getId(), filename);
+
         StringBuilder body = new StringBuilder();
         body.append("# ").append(task.getTitle()).append("\n\n");
         if (!task.getDescription().isBlank()) {
             body.append(task.getDescription()).append("\n");
         }
 
-        return writeMarkdown(file, fm, body.toString());
+        return project(file, fm, body.toString());
     }
 
     /**
-     * Lista todas as tarefas no vault.
+     * Lista todas as tarefas (do repositório SQLite — fonte da verdade).
      *
      * @return lista de tarefas
      */
     public static List<Task> listTasks() {
-        return listEntities(TASKS_DIR, VaultManager::parseTask);
+        ensureVault(); // sincroniza vault ↔ SQLite (uma vez por sessão/vault)
+        return entityRepository().listTasks();
     }
 
     // ------------------------------------------------------------------
@@ -317,19 +344,20 @@ public final class VaultManager {
     // ------------------------------------------------------------------
 
     /**
-     * Guarda uma nota no vault.
+     * Guarda uma nota. SQLite primeiro (fonte da verdade, incluindo o texto
+     * original em linguagem natural); vault como projeção.
      *
      * @param note a nota a guardar
      * @param originalText o texto original em linguagem natural (se aplicável)
-     * @return o caminho do ficheiro, ou {@code null} se falhou
+     * @return o caminho do ficheiro projetado no vault
      */
     public static Path saveNote(Note note, String originalText) {
         ensureVault();
+        entityRepository().upsertNote(note, originalText);
         String title = note.getTitle() != null && !note.getTitle().isBlank()
                 ? note.getTitle().trim() : deriveNoteTitle(note.getContent());
         String filename = sanitizeFilename(title) + MD_EXT;
         Path dir = getVaultPath().resolve(NOTES_DIR);
-        removeStaleFiles(dir, note.getId(), filename);
         Path file = dir.resolve(filename);
 
         Map<String, String> fm = new HashMap<>();
@@ -344,18 +372,22 @@ public final class VaultManager {
         fm.put("updated", note.getUpdatedAt() != null ? note.getUpdatedAt().format(DATETIME_FMT) : "");
 
         // O corpo guarda apenas o conteúdo da nota — o título vive no frontmatter.
+        mergeCustomFrontmatter("note", NOTES_DIR, note.getId(), fm);
+        removeStaleFiles(dir, note.getId(), filename);
+
         String body = note.getContent() == null ? "" : note.getContent();
 
-        return writeMarkdown(file, fm, body);
+        return project(file, fm, body);
     }
 
     /**
-     * Lista todas as notas no vault.
+     * Lista todas as notas (do repositório SQLite — fonte da verdade).
      *
      * @return lista de notas
      */
     public static List<Note> listNotes() {
-        return listEntities(NOTES_DIR, VaultManager::parseNote);
+        ensureVault(); // sincroniza vault ↔ SQLite (uma vez por sessão/vault)
+        return entityRepository().listNotes();
     }
 
     // ------------------------------------------------------------------
@@ -363,16 +395,17 @@ public final class VaultManager {
     // ------------------------------------------------------------------
 
     /**
-     * Guarda um projeto no vault.
+     * Guarda um projeto. SQLite primeiro (fonte da verdade); vault como
+     * projeção.
      *
      * @param project o projeto a guardar
-     * @return o caminho do ficheiro, ou {@code null} se falhou
+     * @return o caminho do ficheiro projetado no vault
      */
     public static Path saveProject(Project project) {
         ensureVault();
+        entityRepository().upsertProject(project);
         String filename = sanitizeFilename(project.getName()) + MD_EXT;
         Path dir = getVaultPath().resolve(PROJECTS_DIR);
-        removeStaleFiles(dir, project.getId(), filename);
         Path file = dir.resolve(filename);
 
         Map<String, String> fm = new HashMap<>();
@@ -387,22 +420,26 @@ public final class VaultManager {
         fm.put("created", project.getCreatedAt() != null ? project.getCreatedAt().format(DATETIME_FMT) : "");
         fm.put("updated", project.getUpdatedAt() != null ? project.getUpdatedAt().format(DATETIME_FMT) : "");
 
+        mergeCustomFrontmatter("project", PROJECTS_DIR, project.getId(), fm);
+        removeStaleFiles(dir, project.getId(), filename);
+
         StringBuilder body = new StringBuilder();
         body.append("# ").append(project.getName()).append("\n\n");
         if (!project.getDescription().isBlank()) {
             body.append(project.getDescription()).append("\n");
         }
 
-        return writeMarkdown(file, fm, body.toString());
+        return project(file, fm, body.toString());
     }
 
     /**
-     * Lista todos os projetos no vault.
+     * Lista todos os projetos (do repositório SQLite — fonte da verdade).
      *
      * @return lista de projetos
      */
     public static List<Project> listProjects() {
-        return listEntities(PROJECTS_DIR, VaultManager::parseProject);
+        ensureVault(); // sincroniza vault ↔ SQLite (uma vez por sessão/vault)
+        return entityRepository().listProjects();
     }
 
     /**
@@ -426,30 +463,6 @@ public final class VaultManager {
     // Delete
     // ------------------------------------------------------------------
 
-    /**
-     * Elimina um ficheiro do vault.
-     *
-     * @param filePath o caminho do ficheiro a eliminar
-     * @return {@code true} se eliminado com sucesso
-     */
-    public static boolean deleteEntity(Path filePath) {
-        try {
-            return Files.deleteIfExists(filePath);
-        } catch (IOException e) {
-            return false;
-        }
-    }
-
-    /**
-     * Elimina do vault o ficheiro cuja entidade tem o id indicado, no diretório
-     * dado. Ao procurar por id (em vez de por nome de ficheiro) funciona mesmo
-     * se a entidade tiver sido renomeada — o nome do ficheiro é derivado do
-     * nome/título, pelo que apagar por nome falharia após uma edição.
-     *
-     * @param dirName o subdiretório do tipo de entidade (ex.: {@link #PEOPLE_DIR})
-     * @param id     o id estável da entidade a eliminar
-     * @return {@code true} se algum ficheiro foi eliminado
-     */
     /**
      * Devolve o caminho do ficheiro markdown da entidade com o id indicado, no
      * diretório do tipo de entidade dado. Procura por id (não por nome de
@@ -484,13 +497,33 @@ public final class VaultManager {
         return null;
     }
 
-    private static boolean deleteEntityById(String dirName, String id) {
+    /**
+     * Elimina do repositório (fonte da verdade) e do vault (projeção) a
+     * entidade com o id indicado, no diretório dado. Ao procurar por id (em
+     * vez de por nome de ficheiro) funciona mesmo se a entidade tiver sido
+     * renomeada.
+     *
+     * @param dirName o subdiretório do tipo de entidade (ex.: {@link #PEOPLE_DIR})
+     * @param id     o id estável da entidade a eliminar
+     * @return {@code true} se a entidade foi eliminada (do repositório e/ou da projeção)
+     */
+    public static boolean deleteEntityById(String dirName, String id) {
         if (id == null || id.isBlank()) {
             return false;
         }
-        Path dir = getVaultPath().resolve(dirName);
-        if (!Files.isDirectory(dir)) {
-            return false;
+        // 1) Eliminar da fonte da verdade (SQLite).
+        String type = dirNameToType(dirName);
+        if (type == null) {
+            return false; // Tipo desconhecido: nunca eliminar.
+        }
+        boolean repoDeleted = entityRepository().delete(type, id);
+        // 2) Eliminar a projeção no vault (por id, confinado à pasta).
+        Path vault = getVaultPath();
+        Path dir = vault.resolve(dirName).normalize();
+        // Confinamento: a pasta-alvo tem de ser um filho DIRETO do vault (não
+        // ../, nem caminhos absolutos) — eliminação nunca sai do vault.
+        if (!dir.getParent().equals(vault) || !Files.isDirectory(dir)) {
+            return repoDeleted;
         }
         boolean deleted = false;
         try (Stream<Path> files = Files.list(dir)) {
@@ -512,7 +545,7 @@ public final class VaultManager {
         if (deleted) {
             util.VaultIndex.getInstance().invalidate();
         }
-        return deleted;
+        return deleted || repoDeleted;
     }
 
     /**
@@ -753,9 +786,22 @@ public final class VaultManager {
             // Escrita atómica: temp -> flush -> atomic move. Evita corrupção de
             // ficheiros Markdown se o processo for interrompido a meio da escrita.
             util.AtomicWrites.write(file, sb.toString());
+            // Registar o hash do conteúdo projetado: permite ao
+            // EntitySynchronizer distinguir "projeção intacta" de "editado
+            // externamente no Obsidian" na próxima sincronização.
+            String projectedId = frontmatter.get("id");
+            if (projectedId != null && !projectedId.isBlank()) {
+                try {
+                    entityRepository().setProjectionHash(
+                            projectedId, EntitySynchronizer.sha256(sb.toString()));
+                } catch (RuntimeException hashError) {
+                    LOGGER.log(Level.WARNING,
+                            "[AETHER] Could not record projection hash: " + hashError.getMessage());
+                }
+            }
             // Sinalizar ao FileWatcher que esta escrita é interna (supressão de
             // loop) e invalidar o index para que leituras seguintes vejam dados
-            // atualizados. O vault continua a ser a fonte de persistência.
+            // atualizados. O SQLite é a fonte da verdade; o vault é a projeção.
             util.VaultFileWatcher.markInternalWrite(file);
             util.VaultIndex.getInstance().invalidate();
             return file;
@@ -775,7 +821,7 @@ public final class VaultManager {
      * @param content o conteúdo completo do ficheiro
      * @return mapa de pares chave-valor
      */
-    private static Map<String, String> parseFrontmatter(String content) {
+    static Map<String, String> parseFrontmatter(String content) {
         Map<String, String> fm = new HashMap<>();
         if (content == null || !content.startsWith(FM_DELIMITER)) {
             return fm;
@@ -790,7 +836,11 @@ public final class VaultManager {
             if (colonIdx > 0) {
                 String key = line.substring(0, colonIdx).trim();
                 String value = line.substring(colonIdx + 1).trim();
-                fm.put(key, value);
+                // Primeira ocorrência vence: ficheiros bem-formados nunca têm
+                // chaves duplicadas, e a projeção do AETHER escreve as chaves
+                // autoritárias primeiro — uma chave injetada/anexada não pode
+                // sequestrar o id ou o tipo de uma entidade.
+                fm.putIfAbsent(key, value);
             }
         }
         return fm;
@@ -820,7 +870,7 @@ public final class VaultManager {
     /**
      * Faz parse de um ficheiro markdown para uma Person.
      */
-    private static Person parsePerson(String content) {
+    static Person parsePerson(String content) {
         Map<String, String> fm = parseFrontmatter(content);
         String name = fm.getOrDefault("name", "");
         LocalDate birthDate = parseDate(fm.get("birthday"));
@@ -837,7 +887,7 @@ public final class VaultManager {
     /**
      * Faz parse de um ficheiro markdown para um Event.
      */
-    private static Event parseEvent(String content) {
+    static Event parseEvent(String content) {
         Map<String, String> fm = parseFrontmatter(content);
         String title = fm.getOrDefault("title", "");
         LocalDateTime start = parseDateTime(fm.get("start"));
@@ -854,7 +904,7 @@ public final class VaultManager {
     /**
      * Faz parse de um ficheiro markdown para uma Task.
      */
-    private static Task parseTask(String content) {
+    static Task parseTask(String content) {
         Map<String, String> fm = parseFrontmatter(content);
         String title = fm.getOrDefault("title", "");
         LocalDateTime deadline = parseDateTime(fm.get("deadline"));
@@ -871,7 +921,7 @@ public final class VaultManager {
     /**
      * Faz parse de um ficheiro markdown para uma Note.
      */
-    private static Note parseNote(String content) {
+    static Note parseNote(String content) {
         Map<String, String> fm = parseFrontmatter(content);
         String body = extractBody(content);
         String id = fm.getOrDefault("id", "");
@@ -894,7 +944,7 @@ public final class VaultManager {
     /**
      * Faz parse de um ficheiro markdown para um Project.
      */
-    private static Project parseProject(String content) {
+    static Project parseProject(String content) {
         Map<String, String> fm = parseFrontmatter(content);
         String name = fm.getOrDefault("name", "");
         LocalDateTime deadline = parseDateTime(fm.get("deadline"));
@@ -911,43 +961,154 @@ public final class VaultManager {
     // Helpers
     // ------------------------------------------------------------------
 
+    /** Repositório de entidades (SQLite — fonte da verdade). */
+    private static volatile SqliteEntityRepository entityRepo;
+
     /**
-     * Garante que o vault está inicializado antes de qualquer operação.
+     * Acesso ao repositório de entidades (SQLite, autoritativo desde a
+     * migração v3). Compartilhado com o {@link EntitySynchronizer}.
+     *
+     * @return o repositório (nunca {@code null})
+     */
+    static SqliteEntityRepository entityRepository() {
+        SqliteEntityRepository current = entityRepo;
+        if (current == null) {
+            synchronized (VaultManager.class) {
+                current = entityRepo;
+                if (current == null) {
+                    current = new SqliteEntityRepository();
+                    entityRepo = current;
+                }
+            }
+        }
+        return current;
+    }
+
+    /**
+     * Mapeia o nome do diretório do vault no tipo lógico da entidade.
+     */
+    private static String dirNameToType(String dirName) {
+        return switch (dirName == null ? "" : dirName) {
+            case PEOPLE_DIR -> "person";
+            case EVENTS_DIR -> "event";
+            case TASKS_DIR -> "task";
+            case NOTES_DIR -> "note";
+            case PROJECTS_DIR -> "project";
+            default -> null;
+        };
+    }
+
+    /**
+     * Projeta uma entidade no vault. O repositório SQLite JÁ foi escrito
+     * quando este método é chamado; falhar aqui não perde dados — devolve o
+     * caminho previsto para a projeção, e o ficheiro é recriado na próxima
+     * sincronização ({@link EntitySynchronizer}).
+     *
+     * @param file o caminho destino no vault
+     * @param frontmatter o frontmatter da entidade
+     * @param body o corpo markdown
+     * @return o caminho do ficheiro projetado
+     */
+    private static Path project(Path file, Map<String, String> frontmatter, String body) {
+        Path written = writeMarkdown(file, frontmatter, body);
+        return written != null ? written : file;
+    }
+
+    /**
+     * Preserva chaves de frontmatter definidas pelo utilizador durante a
+     * re-projeção (spec final: "unknown / user-defined frontmatter fields
+     * MUST be preserved").
+     * <p>
+     * Os campos AETHER (whitelist por tipo em {@link CustomFrontmatter}) são
+     * sempre autoritários; os restantes pertencem ao utilizador e sobrevivem
+     * a saves, re-projeções e renames. As chaves são lidas de duas fontes:
+     * </p>
+     * <ul>
+     *   <li>o ficheiro atual no vault com o MESMO id (procura por id, não por
+     *   nome de ficheiro — cobre o caso do rename), estado manual mais
+     *   recente — vence em caso de conflito;</li>
+     *   <li>a coluna {@code custom_frontmatter} do repositório (capturada nas
+     *   importações) — cobre vault apagado e ficheiros eliminados.</li>
+     * </ul>
+     * <p>
+     * O conjunto fundido é re-persistido no repositório para sobreviver à
+     * próxima re-projeção, e adicionado ao frontmatter a projetar. Não pode
+     * colidir com campos AETHER: a extração exclui-os por construção.
+     * Silenciosamente ignorado em caso de erro — a projeção nunca falha por
+     * causa de metadados do utilizador.
+     * </p>
+     *
+     * @param type        o tipo lógico da entidade
+     * @param dirName     o diretório do vault da entidade
+     * @param id          o id estável da entidade
+     * @param frontmatter o frontmatter AETHER (recebe as chaves do utilizador)
+     */
+    private static void mergeCustomFrontmatter(String type, String dirName,
+                                                String id, Map<String, String> frontmatter) {
+        if (id == null || id.isBlank()) {
+            return;
+        }
+        java.util.LinkedHashMap<String, String> custom = new java.util.LinkedHashMap<>();
+
+        // 1) Chaves ainda presentes no ficheiro atual (por id — inclui o
+        //    ficheiro com o nome antigo durante um rename).
+        Path dir = getVaultPath().resolve(dirName);
+        if (java.nio.file.Files.isDirectory(dir)) {
+            try (var files = java.nio.file.Files.list(dir)) {
+                files.filter(p -> p.toString().endsWith(MD_EXT)).forEach(p -> {
+                    try {
+                        Map<String, String> fm = parseFrontmatter(
+                                java.nio.file.Files.readString(p));
+                        if (id.equals(fm.get("id"))) {
+                            custom.putAll(CustomFrontmatter.extract(type, fm));
+                        }
+                    } catch (java.io.IOException ignored) {
+                        // Ficheiro ilegível: ignorar.
+                    }
+                });
+            } catch (java.io.IOException ignored) {
+                // Diretório ilegível: seguir só com o repositório.
+            }
+        }
+
+        // 2) Chaves conhecidas de importações anteriores (sobrevivem a vault
+        //    apagado e a ficheiros eliminados externamente).
+        try {
+            String stored = entityRepository().customFrontmatter(type, id);
+            if (stored != null) {
+                CustomFrontmatter.fromJson(stored).forEach(custom::putIfAbsent);
+            }
+        } catch (RuntimeException ignored) {
+            // Repositório indisponível: projetar sem metadados, sem falhar.
+        }
+
+        if (custom.isEmpty()) {
+            return;
+        }
+        // Re-persistir o conjunto fundido (sobrevive ao próximo rename/wipe).
+        try {
+            entityRepository().setCustomFrontmatter(type, id,
+                    CustomFrontmatter.toJson(custom));
+        } catch (RuntimeException ignored) {
+            // Ver acima: nunca falhar a projeção por metadados.
+        }
+        frontmatter.putAll(custom);
+    }
+
+    /**
+     * Garante que o vault está inicializado antes de qualquer operação e —
+     * uma vez por sessão/vault — sincroniza-o com o repositório SQLite
+     * (importa edições externas, reprojeta ficheiros em falta).
      */
     private static void ensureVault() {
         if (!isVaultInitialized()) {
             initializeVault();
         }
-    }
-
-    /**
-     * Lista todas as entidades de um diretório do vault, fazendo parse de cada ficheiro.
-     *
-     * @param dirName o nome do diretório
-     * @param parser a função de parse
-     * @param <T> o tipo de entidade
-     * @return lista de entidades
-     */
-    private static <T> List<T> listEntities(String dirName, java.util.function.Function<String, T> parser) {
-        Path dir = getVaultPath().resolve(dirName);
-        if (!Files.isDirectory(dir)) {
-            return List.of();
-        }
-        try (Stream<Path> files = Files.list(dir)) {
-            return files
-                    .filter(p -> p.toString().endsWith(MD_EXT))
-                    .map(p -> {
-                        try {
-                            return Files.readString(p);
-                        } catch (IOException e) {
-                            return null;
-                        }
-                    })
-                    .filter(content -> content != null && !content.isBlank())
-                    .map(parser)
-                    .collect(Collectors.toList());
-        } catch (IOException e) {
-            return List.of();
+        try {
+            EntitySynchronizer.reconcileIfNeeded();
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.WARNING,
+                    "[AETHER] Vault sync skipped: " + e.getMessage());
         }
     }
 

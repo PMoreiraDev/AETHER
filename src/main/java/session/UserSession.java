@@ -34,6 +34,21 @@ public final class UserSession {
      * Creates a new user session, loading any stored profile and settings.
      */
     private UserSession() {
+        // Migrações de esquema ANTES de qualquer repositório tocar na base de
+        // dados: cada arranque aplica as migrações pendentes (com backup
+        // automático pré-migração). Nunca em getConnection() — ver
+        // SchemaMigrations.
+        //
+        // FALHA DE MIGRAÇÃO = ARRANQUE ABORTADO. Continuar com uma base de
+        // dados incompatível (ex.: escrita por um build mais recente) poderia
+        // corromper dados — o estado incorreto prefere-se a dados perdidos
+        // (spec §49: irrecoverable application state é release blocker).
+        String migrationError = persistence.SchemaMigrations.migrateIfNeeded();
+        if (migrationError != null) {
+            throw new IllegalStateException(
+                    "Base de dados AETHER incompatível com esta versão: " + migrationError);
+        }
+
         this.appSettingsRepository = new SqliteAppSettingsRepository();
         this.userProfileRepository = new SqliteUserProfileRepository();
 

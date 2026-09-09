@@ -166,6 +166,19 @@ public final class VaultFileWatcher {
                     continue;
                 }
                 externalChange = true;
+                // Edições externas (ex.: Obsidian) em pastas de entidades são
+                // reimportadas para o SQLite (fonte da verdade) por hash —
+                // só se o conteúdo realmente mudou. Eliminações externas NÃO
+                // eliminam a entidade (o ficheiro é reprojetado no arranque).
+                if (event.kind() != ENTRY_DELETE) {
+                    try {
+                        persistence.EntitySynchronizer.onExternalChange(file);
+                    } catch (RuntimeException importError) {
+                        LOGGER.log(Level.WARNING,
+                                "[AETHER] External change import failed for " + file
+                                        + ": " + importError.getMessage());
+                    }
+                }
             }
 
             if (externalChange) {

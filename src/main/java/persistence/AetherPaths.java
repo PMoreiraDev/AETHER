@@ -57,6 +57,11 @@ public final class AetherPaths {
      * @return the database file path
      */
     public static Path databaseFile() {
-        return dataDirectory().resolve("AETHER.db");
+        // Delega em Database.getDatabasePath() — UMA definição do local da
+        // base de dados (sem duplicação). Nota: historicamente o local da DB
+        // (APPDATA/~/AETHER) diferia do dataDirectory() usado pelo vault; o
+        // comportamento existente é preservado para não mover silenciosamente
+        // bases de dados de instalações em uso.
+        return Database.getDatabasePath();
     }
 }

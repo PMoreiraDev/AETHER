@@ -94,7 +94,32 @@ public class LauncherApp extends Application {
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Falha ao iniciar a aplicação AETHER.", e);
+            showFatalError(e);
         }
+    }
+
+    /**
+     * Mostra um diálogo de erro fatal e termina. Usado quando o arranque
+     * falha de forma irrecuperável (ex.: base de dados escrita por um build
+     * mais recente do AETHER) — sem isto o utilizador ficaria sem janela e
+     * sem explicação nenhuma.
+     */
+    private void showFatalError(Exception e) {
+        try {
+            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(
+                    javafx.scene.control.Alert.AlertType.ERROR,
+                    "O AETHER não conseguiu arrancar.\n\n"
+                            + (e.getMessage() != null ? e.getMessage()
+                            : "Erro desconhecido durante o arranque.")
+                            + "\n\nNenhum dado foi alterado.");
+            alert.setTitle("AETHER");
+            alert.setHeaderText("Falha no arranque");
+            alert.showAndWait();
+        } catch (Exception dialogError) {
+            LOGGER.log(Level.WARNING, "Não foi possível mostrar o diálogo de erro: "
+                    + dialogError.getMessage());
+        }
+        javafx.application.Platform.exit();
     }
 
     /**

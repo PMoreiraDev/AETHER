@@ -55,11 +55,25 @@ public final class BackupService {
         Files.createDirectories(backups);
         Path zipFile = backups.resolve("aether-backup-" + LocalDateTime.now().format(TS) + ".zip");
 
+        // WAL-safe backup: o SQLite em modo WAL pode ter transações confirmadas
+        // apenas no ficheiro -wal. Um checkpoint (TRUNCATE) força-as para o
+        // ficheiro principal ANTES da cópia — sem isto, um backup "de ontem"
+        // podia perder escritas de hoje.
+        Database.checkpointWal();
+
         List<Path> sources = new ArrayList<>();
         // SQLite database.
         Path db = Database.getDatabasePath();
         if (Files.isRegularFile(db)) {
             sources.add(db);
+        }
+        // Ficheiros laterais do WAL (se ainda existirem após o checkpoint —
+        // incluídos por precaução; restaurar juntos com o .db é seguro).
+        for (String suffix : new String[]{"-wal", "-shm"}) {
+            Path side = db.resolveSibling(db.getFileName().toString() + suffix);
+            if (Files.isRegularFile(side) && Files.size(side) > 0) {
+                sources.add(side);
+            }
         }
         // Vault folder (all markdown).
         Path vault = persistence.VaultManager.getVaultPath();

@@ -488,28 +488,22 @@ public final class ActionExecutor {
         if (id == null || id.isBlank()) return false;
         String dir = dirForType(t);
         if (dir == null) return false;
-        Path file = VaultManager.findFileById(dir, id);
-        if (file == null) return false;
 
-        // Nome de apresentação da entidade, para limpar referências órfãs.
+        // Nome de apresentação da entidade (ANTES de eliminar), para limpar
+        // referências órfãs.
         String name = displayName(findEntityById(t, id));
 
-        boolean deleted = false;
-        try {
-            deleted = Files.deleteIfExists(file);
-            if (deleted) {
-                VaultFileWatcher.markInternalWrite(file);
-            }
-        } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Não foi possível eliminar o ficheiro " + file, e);
-        }
+        // Eliminação SEMPRE pelo VaultManager (repositório SQLite — fonte da
+        // verdade — E projeção do vault, por id). Nunca eliminar ficheiros
+        // diretamente: com o SQLite autoritativo, apagar só o ficheiro deixava
+        // a entidade "viva" no repositório e ela reapareceria.
+        boolean deleted = VaultManager.deleteEntityById(dir, id);
 
         if (deleted) {
             // Limpa wikilinks órfãs em todo o vault: [[Nome]] -> Nome
             if (name != null && !name.isBlank()) {
                 cleanupOrphanedWikilinks(name);
             }
-            VaultIndex.getInstance().invalidate();
             VaultRefreshBus.publish(VaultRefreshBus.ChangeType.DELETED, t.name());
         }
         return deleted;
